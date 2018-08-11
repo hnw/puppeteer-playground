@@ -2,19 +2,27 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 
 let config = require(__dirname + '/../config/config.json');
-const scriptname = path.basename(__filename, '.js');
-
-if (!config[scriptname]) {
-  console.log('config[' + scriptname + '] not found');
-  process.exit();
+{
+  const scriptname = path.basename(__filename, '.js');
+  if (!config[scriptname]) {
+    console.log('config[' + scriptname + '] not found');
+    process.exit();
+  }
+  config = config[scriptname];
 }
-config = config[scriptname];
+
+let launchOptions = {
+  headless: true,
+  slowMo : 200,
+  args: ['--ignore-certificate-errors'],
+};
+// For Raspbian
+if (process.arch === 'arm') {
+  launchOptions.executablePath = '/usr/bin/chromium-browser';
+}
 
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: false,
-    "slowMo" : 200,
-  });
+  const browser = await puppeteer.launch(launchOptions);
   let page = await browser.newPage();
 
   try {
@@ -26,9 +34,9 @@ config = config[scriptname];
       const loginPasswordSelector = 'input[name="webPassword"]';
       const loginButtonSelector = 'input[name="submit1"]';
 
-      await page.waitForSelector(loginUseridSelector);
-      await page.waitForSelector(loginPasswordSelector);
-      await page.waitForSelector(loginButtonSelector);
+      await page.waitForSelector(loginUseridSelector, {visible: true});
+      await page.waitForSelector(loginPasswordSelector, {visible: true});
+      await page.waitForSelector(loginButtonSelector, {visible: true});
 
       await page.type(loginUseridSelector, config['userid']);
       await page.type(loginPasswordSelector, config['password']);
