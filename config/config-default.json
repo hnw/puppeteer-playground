@@ -4,5 +4,10 @@
     "password" : "xxxxxx",
     "birthday" : "xxxxxx",
     "phonenum" : "xxxxxx"
+  },
+  "daiwa_next" : {
+    "userid" : "xxxxxx",
+    "password" : "xxxxxx",
+    "torihikipw" : "0000"
   }
 }
