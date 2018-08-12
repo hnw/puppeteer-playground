@@ -1,14 +1,33 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
+const scriptName = path.basename(__filename);
+
+function usage() {
+  console.log('usage: node %s [銀行名] [振込金額]', scriptName)
+  process.exit();
+}
+
+const argv = process.argv.slice(2);
+if (argv.length < 2) {
+  console.log('ERROR: 銀行名と振込金額を指定してください')
+  usage();
+}
+const bankName = argv[0];
+const transferAmount = argv[1];
+
+if (!/^\d+$/.test(transferAmount)) {
+  console.log('ERROR: 振込金額は整数で入力してください')
+  usage();
+}
 
 let config = require(__dirname + '/../config/config.json');
 {
-  const scriptname = path.basename(__filename, '.js');
-  if (!config[scriptname]) {
-    console.log('config[' + scriptname + '] not found');
-    process.exit();
+  const configName = path.basename(scriptName, '.js');
+  if (!config[configName]) {
+    console.log('ERROR: config[' + configName + '] not found');
+    usage();
   }
-  config = config[scriptname];
+  config = config[configName];
 }
 
 let launchOptions = {
@@ -61,16 +80,21 @@ if (process.arch === 'arm') {
 
     // トップページ
     {
-      const tds = await page.$x('//th[text()="円普通預金残高"]/following-sibling::td[1]')
+      const balanceSelector = '//th[text()="円普通預金残高"]/following-sibling::td[1]';
+      const tds = await page.$x(balanceSelector);
       if (tds.length == 0) {
         throw new Error ('"円普通預金残高" not found');
       }
       balance = await page.evaluate(td => td.textContent, tds[0]);
       if (!/^[0-9,]+円$/.test(balance)) {
-        throw new Error ('"円普通預金残高" is illegal format: ' + balance);
+        throw new Error ('"円普通預金残高" might be illegal format: ' + balance);
       }
       balance = parseInt(balance.replace(/[,円]/, ''), 10);
       //console.log(balance);
+
+      if (balance <= transferAmount) {
+        throw new Error('預金残高が不足しています');
+      }
 
       let anchors = await page.$x('//a[contains(., "振込")]')
       if (anchors.length == 0) {
@@ -89,10 +113,10 @@ if (process.arch === 'arm') {
         console.log("display all");
         anchors[0].click();
       }
-      const furikomiButtonSelector = '//tr/td[4][contains(.,"ネット")]/following-sibling::td[2]//input[@type="button"][@value="振込"]';
+      const furikomiButtonSelector = '//tr/td[4][contains(.,"'+bankName+'")]/following-sibling::td[2]//input[@type="button"][@value="振込"]';
       const buttons = await page.$x(furikomiButtonSelector);
       if (buttons.length <= 0) {
-        throw new Error('"振込" link not found for ');
+        throw new Error('"振込" link not found for "'+bankName+'"');
       }
       await Promise.all([
         page.waitForNavigation({waitUntil: "domcontentloaded"}),
@@ -106,7 +130,7 @@ if (process.arch === 'arm') {
       const submitButtonSelector = 'input[name="BtnKakunin"]';
       await page.waitForSelector(textboxSelector);
       await page.waitForSelector(submitButtonSelector);
-      await page.type(textboxSelector, "1000");
+      await page.type(textboxSelector, transferAmount);
 
       await Promise.all([
         page.waitForNavigation({waitUntil: "domcontentloaded"}),
@@ -136,7 +160,7 @@ if (process.arch === 'arm') {
   } catch (err) {
     console.log(err);
   } finally {
-    await page.screenshot({path: 'error.png'});
+    await page.screenshot({path: 'screenshot.png'});
     await browser.close();
   }
 })();
