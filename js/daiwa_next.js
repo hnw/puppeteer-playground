@@ -110,7 +110,6 @@ if (process.arch === 'arm') {
     {
       const anchors = await page.$x('//a[contains(.,"すべてを表示")]');
       if (anchors.length > 0) {
-        console.log("display all");
         anchors[0].click();
       }
       const furikomiButtonSelector = '//tr/td[4][contains(.,"'+bankName+'")]/following-sibling::td[2]//input[@type="button"][@value="振込"]';
