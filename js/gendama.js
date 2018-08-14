@@ -1,101 +1,72 @@
+
 const puppeteer = require('puppeteer');
 const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
+const fs = require('fs');
+const request = require('request');
 const scriptName = path.basename(__filename);
-
-function usage() {
-  console.log('usage: node %s', scriptName)
-  process.exit();
-}
-
-let config = require(__dirname + '/../config/config.json');
-{
-  const configName = path.basename(scriptName, '.js');
-  if (!config[configName]) {
-    console.log('ERROR: config[' + configName + '] not found');
-    usage();
-  }
-  config = config[configName];
-}
-
-let launchOptions = {
-  headless: true,
-  slowMo : 200,
-  args: ['--ignore-certificate-errors'],
-};
-// For Raspbian
-if (process.arch === 'arm') {
-  launchOptions.executablePath = '/usr/bin/chromium-browser';
-}
+const yargs = require('yargs')
+      .usage('Usage: $0 [options]')
+      .describe('debug', 'Force headful')
+      .help()
+      .version('0.0.1')
+      .locale('en');
+const argv = yargs.argv;
 
 (async () => {
-  const browser = await puppeteer.launch(launchOptions);
+  const config = loadConfig(scriptName);
+  const options = Object.assign(config['options'], { headless: !(argv.debug) });
+  const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
+  if (argv.debug) {
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  }
 
   try {
-    await page.goto('https://ssl.realworld.jp/auth/?site=gendama_jp&rid=&af=&frid=&token=&goto=http%3A%2F%2Fwww.gendama.jp%2Fwelcome&p=start');
+    await login(page);
+    await forest(page);
+    await race(page);
+    await train(page);
 
-    // げん玉ログインページ
-    {
-      const mixiLoginSelector = 'a[class~="epark"]'
-      await Promise.all([
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.waitForSelector(mixiLoginSelector, {visible: true})
-          .then(el => el.click(mixiLoginSelector))
-      ]);
-    }
-
-    // eparkログインページ
-    {
-      const idTextBoxSelector = 'input[name="auth_login[username]"]';
-      const pwTextBoxSelector = 'input[name="auth_login[password]"]';
-      const submitButtonSelector = 'button[type="submit"]';
-
-      await page.waitForSelector(idTextBoxSelector, {visible: true})
-        .then(el => el.type(config['eparkid']));
-      await page.waitForSelector(pwTextBoxSelector, {visible: true})
-        .then(el => el.type(config['eparkpw']));
+    // ログインページ
+    async function login(page) {
+      await page.goto('http://www.realworld.jp/connect_epark?goto=http%3A%2F%2Fwww.gendama.jp%2Fwelcome', {waitUntil: "domcontentloaded"});
+      await page.waitForSelector('input[name="auth_login[username]"]', {visible: true})
+        .then(el => el.type(config['epark']['userid']));
+      await page.waitForSelector('input[name="auth_login[password]"]', {visible: true})
+        .then(el => el.type(config['epark']['password']));
 
       await Promise.all([
         page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.waitForSelector(submitButtonSelector, {visible: true})
+        page.waitForSelector('button[type="submit"]', {visible: true})
           .then(el => el.click())
       ]);
     }
 
-    // げん玉トップページ
-    {
-    }
-
-    //await forest(page);
-    //await race(page);
-    //await train(page);
 
     // ポイントの森
     async function forest(page) {
-      await page.waitForSelector('section#ftrlink a[href*="/forest"]', {visible: true})
-        .then(a => a.click())
-
+      await page.goto('http://www.gendama.jp/forest/', {waitUntil: "domcontentloaded"});
       // 5pt
       try {
-        await page.waitForSelector('img[src*="star.gif"]', {visible: true})
+        await page.waitForSelector('img[src*="star.gif"]', {visible: true, timeout: 10000})
           .then(img => img.click());
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は次の処理へ進む
         console.log(e.message);
       }
-
-      // 毎日必ず1pt
+      // 「毎日必ず1pt」
       try {
+        await page.waitFor(1000); // 1秒待ち
         let newPage;
         [newPage] = await Promise.all([
           // 新ウインドウ遷移（target=_blank）待ち
           new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-          await page.waitForSelector('img[src*="bt_day1.gif"]', {visible: true})
+          page.waitForSelector('img[src*="bt_day1.gif"]', {visible: true, timeout: 10000})
             .then(img => img.click())
         ]);
-        await newPage.waitFor(10000); // 10秒待ち
+        await newPage.waitFor(15000); // 15秒待ち
         await newPage.close();
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
@@ -103,67 +74,43 @@ if (process.arch === 'arm') {
         console.log(e.message);
       }
 
-      // モリモリのおすすめサービス（新着が前にくる）
+      // 「詳しく見て1pt」
       try {
-        let newPage;
-        let i = 1 + Math.floor(Math.random() * 8); // 1以上8以下の数をランダム生成
+        // モリモリのおすすめサービス
+        const morimoriOsusume = 'div#osusumemori img[src*="forest_bt1.gif"]';
+        // モリ子のお気に入りサービス
+        const moriko = 'div#moriko img[src*="click_pt.png"]';
+        // ページ下部のオススメサービス
+        const footerOsusume = 'section#reach img[src*="btn_detail.png"]';
 
-        [newPage] = await Promise.all([
-          // 新ウインドウ遷移（target=_blank）待ち
-          new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-          await page.waitForSelector('div#osusumemori div.osusume_box:nth-of-type('+i+') img[src*="forest_bt1.gif"]', {visible: true})
-            .then(img => img.click())
-        ]);
-        await newPage.waitFor(10000); // 10秒待ち
-        await newPage.close();
+        const imgs = await page.$$([morimoriOsusume,moriko,footerOsusume].join(', '));
+        for (let img of imgs) {
+          await page.waitFor(1000); // 1秒待ち
+          let newPage;
+          [newPage] = await Promise.all([
+            // 新ウインドウ遷移（target=_blank）待ち
+            new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
+            img.click()
+          ]);
+          await newPage.waitFor(15000); // 15秒待ち
+          await newPage.close(); // ウインドウを消す
+        }
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は次の処理へ進む
         console.log(e.message);
       }
-
-      // モリ子のお気に入りサービス
-      try {
-        let newPage;
-        let i = 1 + Math.floor(Math.random() * 5); // 1以上5以下の数をランダム生成
-
-        [newPage] = await Promise.all([
-          // 新ウインドウ遷移（target=_blank）待ち
-          new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-          await page.waitForSelector('div#moriko div:nth-of-type('+i+') img[src*="click_pt.png"]', {visible: true})
-            .then(img => img.click())
-        ]);
-        await newPage.waitFor(10000); // 10秒待ち
-        await newPage.close();
-      } catch (e) {
-        if (!(e instanceof TimeoutError)) { throw e; }
-        // タイムアウトの場合は次の処理へ進む
-        console.log(e.message);
-      }
-
-      // 元のページに戻る
-      await Promise.all([
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.goBack()
-      ]);
-      await page.waitFor(5000);
+      await page.waitFor(5000); // 5秒待ち
     }
 
     // モリモリ選手権
     async function race(page) {
-      const morimoriAnchorSelector = 'section#ftrlink a[href*="/race"]';
-      await page.waitForSelector(morimoriAnchorSelector, {visible: true})
-        .then(a => a.click())
-
+      await page.goto('http://www.gendama.jp/race/', {waitUntil: "domcontentloaded"});
       // 前日分の結果をみる（もしあれば）
       try {
-        const result2ImageSelector = 'img[src*="result_btn2.png"]';
-        const entryImageSelector = 'img[src*="entry_btn.png"]'; // 1位目指して参加
-
-        await page.waitForSelector(result2ImageSelector, {visible: true})
+        await page.waitForSelector('img[src*="result_btn2.png"]', {visible: true, timeout: 10000})
           .then(img => img.click());
-
-        page.waitForSelector(entryImageSelector, {visible: true})
+        await page.waitForSelector('img[src*="entry_btn.png"]', {visible: true})
           .then(img => img.click());
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
@@ -173,39 +120,24 @@ if (process.arch === 'arm') {
 
       // 当日分参加
       try {
-        const startImageSelector = 'img[src*="start_btn.png"]';
-        const resultImageSelector = 'img[src*="result_btn.gif"]';
-
-        await page.waitForSelector(startImageSelector, {visible: true})
+        await page.waitForSelector('img[src*="start_btn.png"]', {visible: true, timeout: 10000})
           .then(img => img.click());
-
-        page.waitForSelector(resultImageSelector, {visible: true})
+        await page.waitForSelector('img[src*="result_btn.gif"]', {visible: true})
           .then(img => img.click());
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
-        // タイムアウトの場合は次の処理へ
+        // タイムアウトの場合は次の処理へ進む
         console.log(e.message);
       }
-
-      // 元のページに戻る
-      await Promise.all([
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.goBack()
-      ]);
-      await page.waitFor(5000);
     }
 
     // げん玉電鉄
     async function train(page) {
-      const trainAnchorSelector = 'section#ftrlink a[href*="/train"]';
-      await page.waitForSelector(trainAnchorSelector, {visible: true})
-        .then(a => a.click())
+      await page.goto('http://www.gendama.jp/train/', {waitUntil: "domcontentloaded"});
 
-      // iframe内のcanvasまでスクロールさせる
       try {
-        const gameFrameSelector = 'iframe[src*="sugoroku64.ad-link.jp"]';
-        await page.waitForSelector(gameFrameSelector, {visible:true});
-
+        // iframeを取り出す
+        await page.waitForSelector('iframe[src*="sugoroku64.ad-link.jp"]', {visible:true});
         const frame = await page.frames().find(f => f.url().match(/sugoroku64\.ad-link\.jp/));
         if (!frame) {
           console.log('frame not found?')
@@ -219,17 +151,48 @@ if (process.arch === 'arm') {
         console.log(e.message);
         return;
       }
+      // canvasの特定の位置をクリック
+      await page.mouse.click(700, 600);
 
-      let x = 550;
-      let y = 500;
-      await page.mouse.click(x, y);
-
-      await newPage.waitFor(30000); // 30秒待ち
+      await page.waitFor(30000); // 30秒待ち
     }
   } catch (e) {
     console.log(e);
   } finally {
-    await page.screenshot({path: 'screenshot.png'});
-    await browser.close();
+    if (argv.debug) {
+      console.log('The script is finished.');
+    } else {
+      await browser.close();
+    }
+  }
+  function uploadToSlack(path) {
+    const data = {
+      url: 'https://slack.com/api/files.upload',
+      formData: {
+        token: config['slack']['token'],
+        file: fs.createReadStream(path),
+        channels: config['slack']['channels'],
+      }
+    };
+    request.post(data, function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // do nothing
+      } else {
+        console.log('Upload failure :(');
+      }
+    });
+  }
+  function loadConfig() {
+    let config = require(__dirname + '/../config/config.json');
+    const configName = path.basename(scriptName, '.js');
+    for (i of [configName, 'options', 'slack']) {
+      if (!config[i]) {
+        console.log('ERROR: config[' + i + '] not found');
+        yargs.showHelp();
+        process.exit(1)
+      }
+    }
+    Object.assign(config, config[configName]);
+    return config;
   }
 })();

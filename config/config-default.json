@@ -1,4 +1,16 @@
 {
+  "options" : {
+    "headless" : true,
+    "slowMo" : 200,
+    "defaultViewport" : {
+      "width": 1024,
+      "height": 768
+    },
+  },
+  "slack" : {
+    "token" : "xxxx-xxxx-xxxx",
+    "channels" : "xxxxxxxxx"
+  },
   "dccard" : {
     "userid" : "xxxxxx",
     "password" : "xxxxxx",
@@ -9,5 +21,23 @@
     "userid" : "xxxxxx",
     "password" : "xxxxxx",
     "torihikipw" : "0000"
+  },
+  "epark" : {
+    "userid" : "xxxx",
+    "password" : "xxxx"
+  },
+  "yahoo" : {
+    "userid" : "xxxx",
+    "password" : "xxxx"
+  },
+  "moppy" : {
+    "userid" : "xxxx",
+    "password" : "xxxx"
+  },
+  "gendama" : {
+    "zipcode" : "9999999"
+  },
+  "chobirich" : {
+    "zipcode" : "9999999"
   }
 }
