@@ -43,7 +43,6 @@ const argv = yargs.argv;
       ]);
     }
 
-
     // ポイントの森
     async function forest(page) {
       await page.goto('http://www.gendama.jp/forest/', {waitUntil: "domcontentloaded"});
@@ -151,9 +150,9 @@ const argv = yargs.argv;
         console.log(e.message);
         return;
       }
-      // canvasの特定の位置をクリック
-      await page.mouse.click(700, 600);
-
+      // canvasの特定の位置をクリック（有効区間 x:[650,740] y:[590,600] あたり）
+      await page.waitFor(3000) // 3秒待ち
+      await page.mouse.click(700, 595);
       await page.waitFor(30000); // 30秒待ち
     }
   } catch (e) {
