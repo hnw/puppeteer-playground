@@ -23,10 +23,16 @@ const argv = yargs.argv;
 
   try {
     await login(page);
+    const point = await getCurrentPoint(page);
     await gacha(page);
     await bingo(page);
     await click(page);
     await flyer(page);
+    const newPoint = await getCurrentPoint(page);
+    const earnedPoint = newPoint - point;
+    if (earnedPoint > 0) {
+      postMessageToSlack(`モッピーで ${earnedPoint} pt を獲得しました`);
+    }
 
     // ログインページ
     async function login(page) {
@@ -42,6 +48,23 @@ const argv = yargs.argv;
         page.waitForSelector('button[type="submit"]', {visible: true})
           .then(el => el.click())
       ]);
+    }
+
+    // 現在ポイントを取得
+    async function getCurrentPoint(page) {
+      await page.goto('http://pc.moppy.jp/bankbook/', {waitUntil: "domcontentloaded"});
+      // ポイントが書いてある要素を取り出す
+      let nPointText = await page.$eval('div.point div.data', el => el.textContent);
+      if (!/^\s*[\d,]+\s*P\s*\/\s*[\d,]+\s*C/.test(nPointText)) {
+        // 例外を投げるべきかもしれない…
+        return -1;
+      }
+      nPointText = nPointText.replace(/[,\s]/g, '');
+      const nCoinText = nPointText.replace(/^.*\//, '').replace(/[C]/g, '');
+      const nCoin = parseInt(nCoinText, 10);
+      nPointText = nPointText.replace(/P.*$/, '');
+      const nPoint = parseInt(nPointText, 10);
+      return nPoint + nCoin * 0.1;
     }
 
     // ガチャ（2時更新）
@@ -150,6 +173,9 @@ const argv = yargs.argv;
     }
   } catch (e) {
     console.log(e);
+    const imagePath = 'error.png';
+    await page.screenshot({path: imagePath});
+    uploadToSlack(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
@@ -157,13 +183,32 @@ const argv = yargs.argv;
       await browser.close();
     }
   }
+  function postMessageToSlack(text, username = 'bot') {
+    const data = {
+      url: 'https://slack.com/api/chat.postMessage',
+      formData: {
+        token: config['slack']['token'],
+        channel: config['slack']['channel'],
+        text: text,
+        username: username,
+        icon_emoji: ':ghost:',
+      }
+    };
+    request.post(data, function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // do nothing
+      } else {
+        console.log('Upload failure :(');
+      }
+    });
+  }
   function uploadToSlack(path) {
     const data = {
       url: 'https://slack.com/api/files.upload',
       formData: {
         token: config['slack']['token'],
         file: fs.createReadStream(path),
-        channels: config['slack']['channels'],
+        channels: config['slack']['channel'],
       }
     };
     request.post(data, function(error, response, body) {

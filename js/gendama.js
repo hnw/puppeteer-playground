@@ -25,7 +25,6 @@ const argv = yargs.argv;
   try {
     await login(page);
     const point = await getCurrentPoint(page);
-    console.log(point);
     await forest(page);
     await race(page);
     await train(page);
@@ -50,11 +49,12 @@ const argv = yargs.argv;
       ]);
     }
 
+    // 現在ポイントを取得
     async function getCurrentPoint(page) {
       await page.goto('http://u.realworld.jp/passbook/search/gendama/', {waitUntil: "domcontentloaded"});
       // ポイントが書いてある要素を取り出す（ゴミ付き…）
       let nPointText = await page.$eval('dl.now dd', el => el.textContent);
-      if (!/^\s*[\d,]*R/.test(nPointText)) {
+      if (!/^\s*[\d,]+R/.test(nPointText)) {
         // 例外を投げるべきかもしれない…
         return -1;
       }

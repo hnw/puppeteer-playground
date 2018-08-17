@@ -50,7 +50,7 @@ const argv = yargs.argv;
       ]);
     }
 
-    //
+    // 現在ポイントを取得
     async function getCurrentPoint(page) {
       await page.goto('http://www.chobirich.com/mypage/point_details/stamp/', {waitUntil: "domcontentloaded"});
       const nPointText = await page.$eval('div.mypage_navi span.user_pt_n', el => el.textContent);
