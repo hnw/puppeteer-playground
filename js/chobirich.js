@@ -28,7 +28,8 @@ const argv = yargs.argv;
     await shufoo(page);
     await stamp(page);
     await bingo(page);
-    const earnedPoint = (await getCurrentPoint(page)) - point;
+    const newPoint = await getCurrentPoint(page);
+    const earnedPoint = newPoint - point;
     if (earnedPoint > 0) {
       postMessageToSlack(`ちょびリッチで ${earnedPoint} pt を獲得しました`);
     }
@@ -183,6 +184,9 @@ const argv = yargs.argv;
     }
   } catch (e) {
     console.log(e);
+    const imagePath = 'error.png';
+    await bingoSheet.screenshot({path: imagePath});
+    uploadToSlack(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
