@@ -1,8 +1,7 @@
 const puppeteer = require('puppeteer');
 const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
-const fs = require('fs');
-const request = require('request');
+const my = require('./common_functions.js');
 const scriptName = path.basename(__filename);
 const yargs = require('yargs')
       .usage('Usage: $0 [options]')
@@ -13,7 +12,7 @@ const yargs = require('yargs')
 const argv = yargs.argv;
 
 (async () => {
-  const config = loadConfig(scriptName);
+  const config = my.loadConfig(path.basename(scriptName, '.js'));
   const options = Object.assign(config['options'], { headless: !(argv.debug) });
   const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
@@ -28,11 +27,7 @@ const argv = yargs.argv;
     await shufoo(page);
     await stamp(page);
     await bingo(page);
-    const newPoint = await getCurrentPoint(page);
-    const earnedPoint = newPoint - point;
-    if (earnedPoint > 0) {
-      postMessageToSlack(`ちょびリッチで ${earnedPoint} pt を獲得しました`);
-    }
+    my.postEarnedSummary('ちょびリッチ', point, await getCurrentPoint(page), 0.5);
 
     // ログインページ
     async function login(page) {
@@ -179,68 +174,19 @@ const argv = yargs.argv;
         const bingoCell = await frame.$('tbody img[src*="/bingo/card/0.gif"]');
         const bingoSheet = await frame.evaluateHandle(el => el.closest('tbody'), bingoCell);
         await bingoSheet.screenshot({path: imagePath});
-        uploadToSlack(imagePath);
+        my.uploadToSlack(imagePath);
       }
     }
   } catch (e) {
     console.log(e);
     const imagePath = 'error.png';
     await page.screenshot({path: imagePath});
-    uploadToSlack(imagePath);
+    my.uploadToSlack(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
     } else {
       await browser.close();
     }
-  }
-  function postMessageToSlack(text, username = 'bot') {
-    const data = {
-      url: 'https://slack.com/api/chat.postMessage',
-      formData: {
-        token: config['slack']['token'],
-        channel: config['slack']['channel'],
-        text: text,
-        username: username,
-        icon_emoji: ':ghost:',
-      }
-    };
-    request.post(data, function(error, response, body) {
-      if (!error && response.statusCode == 200) {
-        // do nothing
-      } else {
-        console.log('Upload failure :(');
-      }
-    });
-  }
-  function uploadToSlack(imagePath) {
-    const data = {
-      url: 'https://slack.com/api/files.upload',
-      formData: {
-        token: config['slack']['token'],
-        file: fs.createReadStream(imagePath),
-        channels: config['slack']['channel'],
-      }
-    };
-    request.post(data, function(error, response, body) {
-      if (!error && response.statusCode == 200) {
-        // do nothing
-      } else {
-        console.log('Upload failure :(');
-      }
-    });
-  }
-  function loadConfig() {
-    let config = require(__dirname + '/../config/config.json');
-    const configName = path.basename(scriptName, '.js');
-    for (i of [configName, 'options', 'slack']) {
-      if (!config[i]) {
-        console.log('ERROR: config[' + i + '] not found');
-        yargs.showHelp();
-        process.exit(1)
-      }
-    }
-    Object.assign(config, config[configName]);
-    return config;
   }
 })();
