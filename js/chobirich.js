@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
-const my = require(__dirname + './common_functions.js');
+const my = require(__dirname + '/common_functions.js');
 const scriptName = path.basename(__filename);
 const yargs = require('yargs')
       .usage('Usage: $0 [options]')
