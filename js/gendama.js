@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
-const my = require('./common_functions.js');
+const my = require(__dirname + '/common_functions.js');
 const scriptName = path.basename(__filename);
 const yargs = require('yargs')
       .usage('Usage: $0 [options]')
@@ -16,6 +16,9 @@ const argv = yargs.argv;
   const options = Object.assign(config['options'], { headless: !(argv.debug) });
   const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
+  if (options["workdir"])
+    process.chdir(options["workdir"]);
+  }
   if (argv.debug) {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
   }
@@ -57,7 +60,7 @@ const argv = yargs.argv;
       return nPoint;
     }
 
-    // ポイントの森
+    // ポイントの森（4時・16時更新）
     async function forest(page) {
       await page.goto('http://www.gendama.jp/forest/', {waitUntil: "domcontentloaded"});
       // 5pt
@@ -116,7 +119,7 @@ const argv = yargs.argv;
       await page.waitFor(5000); // 5秒待ち
     }
 
-    // モリモリ選手権
+    // モリモリ選手権（0時更新）
     async function race(page) {
       await page.goto('http://www.gendama.jp/race/', {waitUntil: "domcontentloaded"});
       // 前日分の結果をみる（もしあれば）
@@ -144,9 +147,9 @@ const argv = yargs.argv;
       }
     }
 
-    // げん玉電鉄
+    // げん玉電鉄（14時更新）
     async function train(page) {
-      await page.goto('http://www.gendama.jp/train/', {waitUntil: "domcontentloaded"});
+      await page.goto('http://www.gendama.jp/train/', {waitUntil: "domcontentloaded", timeout: 60000});
 
       try {
         // iframeを取り出す
@@ -175,6 +178,7 @@ const argv = yargs.argv;
     const imagePath = 'error.png';
     await page.screenshot({path: imagePath});
     my.uploadToSlack(imagePath);
+    fs.unlinkSync(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');

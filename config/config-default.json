@@ -5,7 +5,8 @@
     "defaultViewport" : {
       "width": 1024,
       "height": 768
-    }
+    },
+    "workdir" : "/dev/shm",
   },
   "slack" : {
     "token" : "xxxx-xxxx-xxxx",

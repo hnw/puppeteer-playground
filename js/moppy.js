@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
-const my = require('./common_functions.js');
+const my = require(__dirname + './common_functions.js');
 const scriptName = path.basename(__filename);
 const yargs = require('yargs')
       .usage('Usage: $0 [options]')
@@ -16,6 +16,9 @@ const argv = yargs.argv;
   const options = Object.assign(config['options'], { headless: !(argv.debug) });
   const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
+  if (options["workdir"])
+    process.chdir(options["workdir"]);
+  }
   if (argv.debug) {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
   }
@@ -172,6 +175,7 @@ const argv = yargs.argv;
     const imagePath = 'error.png';
     await page.screenshot({path: imagePath});
     my.uploadToSlack(imagePath);
+    fs.unlinkSync(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
