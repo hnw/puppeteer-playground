@@ -16,7 +16,7 @@ const argv = yargs.argv;
   const options = Object.assign(config['options'], { headless: !(argv.debug) });
   const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
-  if (options["workdir"])
+  if (options["workdir"]) {
     process.chdir(options["workdir"]);
   }
   if (argv.debug) {
