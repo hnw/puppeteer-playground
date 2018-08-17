@@ -218,6 +218,7 @@ const argv = yargs.argv;
       url: 'https://slack.com/api/files.upload',
       formData: {
         token: config['slack']['token'],
+        filename: path.basename(path),
         file: fs.createReadStream(path),
         channels: config['slack']['channel'],
       }
