@@ -171,6 +171,7 @@ const argv = yargs.argv;
     }
   } catch (e) {
     console.log(e);
+    my.postMessageToSlack(e.message, 'Error Log');
     const imagePath = 'error.png';
     await page.screenshot({path: imagePath});
     my.uploadToSlack(imagePath);
