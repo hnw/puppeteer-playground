@@ -5,11 +5,11 @@
     "defaultViewport" : {
       "width": 1024,
       "height": 768
-    },
+    }
   },
   "slack" : {
     "token" : "xxxx-xxxx-xxxx",
-    "channels" : "xxxxxxxxx"
+    "channel" : "xxxxxxxxx"
   },
   "dccard" : {
     "userid" : "xxxxxx",

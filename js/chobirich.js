@@ -23,10 +23,15 @@ const argv = yargs.argv;
 
   try {
     await login(page);
+    const point = await getCurrentPoint(page);
     await tokusen(page);
     await shufoo(page);
     await stamp(page);
     await bingo(page);
+    const earnedPoint = (await getCurrentPoint(page)) - point;
+    if (earnedPoint > 0) {
+      postMessageToSlack(`ちょびリッチで ${earnedPoint} pt を獲得しました`);
+    }
 
     // ログインページ
     async function login(page) {
@@ -42,6 +47,16 @@ const argv = yargs.argv;
         page.waitForSelector('button[type="submit"]', {visible: true})
           .then(el => el.click())
       ]);
+    }
+
+    //
+    async function getCurrentPoint(page) {
+      await page.goto('http://www.chobirich.com/mypage/point_details/stamp/', {waitUntil: "domcontentloaded"});
+      const nPointText = await page.$eval('div.mypage_navi span.user_pt_n', el => el.textContent);
+      const nPoint = parseInt(nPointText, 10);
+      const nStamp = (await page.$$('div.detail_stamp_list td img')).length;
+
+      return nPoint+nStamp*0.1
     }
 
     // 特選バナー
@@ -175,13 +190,32 @@ const argv = yargs.argv;
       await browser.close();
     }
   }
+  function postMessageToSlack(text, username = 'bot') {
+    const data = {
+      url: 'https://slack.com/api/chat.postMessage',
+      formData: {
+        token: config['slack']['token'],
+        channel: config['slack']['channel'],
+        text: text,
+        username: username,
+        icon_emoji: ':ghost:',
+      }
+    };
+    request.post(data, function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // do nothing
+      } else {
+        console.log('Upload failure :(');
+      }
+    });
+  }
   function uploadToSlack(path) {
     const data = {
       url: 'https://slack.com/api/files.upload',
       formData: {
         token: config['slack']['token'],
         file: fs.createReadStream(path),
-        channels: config['slack']['channels'],
+        channels: config['slack']['channel'],
       }
     };
     request.post(data, function(error, response, body) {
