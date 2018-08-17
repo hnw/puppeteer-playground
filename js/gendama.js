@@ -24,9 +24,16 @@ const argv = yargs.argv;
 
   try {
     await login(page);
+    const point = await getCurrentPoint(page);
+    console.log(point);
     await forest(page);
     await race(page);
     await train(page);
+    const newPoint = await getCurrentPoint(page);
+    const earnedPoint = newPoint - point;
+    if (earnedPoint > 0) {
+      postMessageToSlack(`げん玉で ${earnedPoint} pt を獲得しました`);
+    }
 
     // ログインページ
     async function login(page) {
@@ -41,6 +48,19 @@ const argv = yargs.argv;
         page.waitForSelector('button[type="submit"]', {visible: true})
           .then(el => el.click())
       ]);
+    }
+
+    async function getCurrentPoint(page) {
+      await page.goto('http://u.realworld.jp/passbook/search/gendama/', {waitUntil: "domcontentloaded"});
+      // ポイントが書いてある要素を取り出す（ゴミ付き…）
+      let nPointText = await page.$eval('dl.now dd', el => el.textContent);
+      if (!/^\s*[\d,]*R/.test(nPointText)) {
+        // 例外を投げるべきかもしれない…
+        return -1;
+      }
+      nPointText = nPointText.replace(/R.*$/, '').replace(/[,\s]/g, '');
+      const nPoint = parseInt(nPointText, 10);
+      return nPoint;
     }
 
     // ポイントの森
@@ -157,6 +177,9 @@ const argv = yargs.argv;
     }
   } catch (e) {
     console.log(e);
+    const imagePath = 'error.png';
+    await page.screenshot({path: imagePath});
+    uploadToSlack(imagePath);
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
@@ -164,13 +187,32 @@ const argv = yargs.argv;
       await browser.close();
     }
   }
-  function uploadToSlack(path) {
+  function postMessageToSlack(text, username = 'bot') {
+    const data = {
+      url: 'https://slack.com/api/chat.postMessage',
+      formData: {
+        token: config['slack']['token'],
+        channel: config['slack']['channel'],
+        text: text,
+        username: username,
+        icon_emoji: ':ghost:',
+      }
+    };
+    request.post(data, function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // do nothing
+      } else {
+        console.log('Upload failure :(');
+      }
+    });
+  }
+  function uploadToSlack(imagePath) {
     const data = {
       url: 'https://slack.com/api/files.upload',
       formData: {
         token: config['slack']['token'],
-        file: fs.createReadStream(path),
-        channels: config['slack']['channels'],
+        file: fs.createReadStream(imagePath),
+        channels: config['slack']['channel'],
       }
     };
     request.post(data, function(error, response, body) {

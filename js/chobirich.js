@@ -185,7 +185,7 @@ const argv = yargs.argv;
   } catch (e) {
     console.log(e);
     const imagePath = 'error.png';
-    await bingoSheet.screenshot({path: imagePath});
+    await page.screenshot({path: imagePath});
     uploadToSlack(imagePath);
   } finally {
     if (argv.debug) {
@@ -213,13 +213,12 @@ const argv = yargs.argv;
       }
     });
   }
-  function uploadToSlack(path) {
+  function uploadToSlack(imagePath) {
     const data = {
       url: 'https://slack.com/api/files.upload',
       formData: {
         token: config['slack']['token'],
-        filename: path.basename(path),
-        file: fs.createReadStream(path),
+        file: fs.createReadStream(imagePath),
         channels: config['slack']['channel'],
       }
     };
