@@ -52,16 +52,11 @@ const argv = yargs.argv;
     async function getCurrentPoint(page) {
       await page.goto('http://pc.moppy.jp/bankbook/', {waitUntil: "domcontentloaded"});
       // ポイントが書いてある要素を取り出す
-      let nPointText = await page.$eval('div.point div.data', el => el.textContent);
-      if (!/^\s*[\d,]+\s*P\s*\/\s*[\d,]+\s*C/.test(nPointText)) {
-        // 例外を投げるべきかもしれない…
-        return -1;
-      }
-      nPointText = nPointText.replace(/[,\s]/g, '');
-      const nCoinText = nPointText.replace(/^.*\//, '').replace(/[C]/g, '');
-      const nCoin = parseInt(nCoinText, 10);
-      nPointText = nPointText.replace(/P.*$/, '');
+      const div = await page.$('div.point div.data');
+      const nPointText = await div.$eval('strong', el => el.textContent.replace(/[,\s]/g, ''));
+      const nCoinText = await div.$eval('em', el => el.textContent.replace(/[,\s]/g, ''));
       const nPoint = parseInt(nPointText, 10);
+      const nCoin = parseInt(nCoinText, 10);
       return nPoint + nCoin * 0.1;
     }
 
