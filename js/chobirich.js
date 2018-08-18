@@ -160,22 +160,39 @@ const argv = yargs.argv;
       try {
         // 当選ビンゴマスがあるかぎりクリック
         for (let i = 0; i < 5; i++) {
-          await frame.waitForSelector('td a img[src*="/bingo/card/"]', {visible: true})
-            .then(a => a.click())
+          const img = await frame.waitForSelector('td a img[src*="/bingo/card/"]',
+                                                     {visible: true, timeout: 10000});
+          await Promise.all([
+            page.waitForNavigation({waitUntil: "domcontentloaded"}),
+            img.click()
+          ]);
           newlyMarked = true;
-          await page.waitFor(2000); // 2秒待ち、事故防止用
+          await page.waitFor(2000); // 2秒待ち（連打防止）
         }
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // 当選ビンゴマスがなくなったらタイムアウトで抜ける
       }
-      // BINGOボタンをクリック
 
       // BINGOシートをSlackに送信
       if (newlyMarked) {
         const bingoCell = await frame.$('tbody img[src*="/bingo/card/0.gif"]');
         const bingoSheet = await frame.evaluateHandle(el => el.closest('tbody'), bingoCell);
-        my.uploadScreenShot(bingoSheet, 'bingo.png');
+        await my.uploadScreenShot(bingoSheet, 'bingo.png');
+      }
+
+      // BINGOボタンをクリック（BINGO達成時のみ表示）
+      try {
+        const button = await frame.waitForSelector('input[src*="bingo.gif"]',
+                                                   {visible: true, timeout: 10000});
+        await Promise.all([
+          page.waitForNavigation({waitUntil: "domcontentloaded"}),
+          button.click()
+        ]);
+        await page.waitFor(60000); // 60秒待ち（成果反映待ち）
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // BINGOボタンが見つからなかったらタイムアウトで抜ける
       }
     }
   } catch (e) {
