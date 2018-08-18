@@ -173,21 +173,15 @@ const argv = yargs.argv;
 
       // BINGOシートをSlackに送信
       if (newlyMarked) {
-        const imagePath = 'bingo.png';
         const bingoCell = await frame.$('tbody img[src*="/bingo/card/0.gif"]');
         const bingoSheet = await frame.evaluateHandle(el => el.closest('tbody'), bingoCell);
-        await bingoSheet.screenshot({path: imagePath});
-        my.uploadToSlack(imagePath);
-        fs.unlinkSync(imagePath);
+        my.uploadScreenShot(bingoSheet, 'bingo.png');
       }
     }
   } catch (e) {
     console.log(e);
-    my.postMessageToSlack(e.message, 'Error Log');
-    const imagePath = 'error.png';
-    await page.screenshot({path: imagePath});
-    my.uploadToSlack(imagePath);
-    fs.unlinkSync(imagePath);
+    my.postError(e);
+    await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');

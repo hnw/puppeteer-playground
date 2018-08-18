@@ -3,15 +3,31 @@ const fs = require('fs');
 let config;
 
 module.exports = {
+  // Puppeteerのscreenshot関数を受け取ってSlackにアップロード
+  postError: function (err) {
+    const msg = `\`\`\`${err.stack}\`\`\``;
+    module.exports.postMessageToSlack(msg, `Error: ${err.message}`);
+  },
+  // Puppeteerのobjcetを受け取ってscreenshotをSlackにアップロード
+  uploadScreenShot: async function (obj, imagePath) {
+    if (typeof(obj.screenshot) !== 'function') {
+      throw new Error('1st argument must have "screenshot()" function');
+      return;
+    }
+    await obj.screenshot({path: imagePath});
+    module.exports.uploadToSlack(imagePath);
+    fs.unlinkSync(imagePath);
+  },
+  // 稼いだポイントの情報をSlackに通知
   postEarnedSummary: function (siteName, prevPoint, currPoint, rate) {
-    const earnedPoint = currPoint - prevPoint;
+    let earnedPoint = Math.round((currPoint - prevPoint) * 10) / 10;
     const earnedYen = earnedPoint * rate;
     let text = '';
-    if (earnedPoint > 0) {
+    if (earnedPoint === 0.0) {
+      text = `${siteName}の現在のポイント: ${currPoint}pt`;
+    } else {
       text = `${siteName}で${earnedPoint}pt（${earnedYen}円）を獲得しました。\n`;
       text = text + `（${prevPoint}pt → ${currPoint}pt）`;
-    } else {
-      text = `${siteName}の現在のポイント: ${currPoint}pt`;
     }
     module.exports.postMessageToSlack(text);
   },

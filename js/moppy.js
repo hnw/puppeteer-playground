@@ -171,11 +171,8 @@ const argv = yargs.argv;
     }
   } catch (e) {
     console.log(e);
-    my.postMessageToSlack(e.message, 'Error Log');
-    const imagePath = 'error.png';
-    await page.screenshot({path: imagePath});
-    my.uploadToSlack(imagePath);
-    fs.unlinkSync(imagePath);
+    my.postError(e);
+    await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
