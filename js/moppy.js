@@ -27,9 +27,14 @@ const argv = yargs.argv;
     await login(page);
     const point = await getCurrentPoint(page);
     await gacha(page);
-    await bingo(page);
     await click(page);
     await shufoo(page);
+    await quiz(page);
+    await eitango(page);
+    await anzan(page);
+    await calendar(page);
+    await bingo(page);
+    await page.waitFor(60000); // 60秒待ち（ポイント反映待ち）
     my.postEarnedSummary('モッピー', point, await getCurrentPoint(page), 1);
 
     // ログインページ
@@ -156,6 +161,82 @@ const argv = yargs.argv;
       
       // ウインドウを消す
       await newPage.close();
+    }
+
+    // クイズ（0,8,16時更新）
+    async function quiz(page) {
+      return await _quiz(page, 'title_quiz.png');
+    }
+
+    // 英単語TEST（0,12時更新）
+    async function eitango(page) {
+      return await _quiz(page, 'title_eitango.png');
+    }
+
+    // ANZAN（0,12時更新）
+    async function anzan(page) {
+      return await _quiz(page, 'title_anzan.png');
+    }
+
+    // この日何曜日?（0,12時更新）
+    async function calendar(page) {
+      return await _quiz(page, 'title_calendar.png');
+    }
+
+    // クイズ系の共通処理
+    async function _quiz(page, linkImage) {
+      await page.goto('http://pc.moppy.jp/gamecontents/', {waitUntil: "domcontentloaded"});
+
+      let newPage;
+      [newPage] = await Promise.all([
+        // 新ウインドウ遷移（target=_blank）待ち
+        new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
+        page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true})
+          .then(img => img.click())
+      ]);
+      try {
+        while (true) {
+          // オーバーレイ広告がもし出ていればclose
+          try {
+            const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
+            closeButton.hover();
+            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            closeButton.click()
+          } catch (e) {
+            if (!(e instanceof TimeoutError)) { throw e; }
+            // タイムアウトの場合は要素が見つからなかった
+          }
+          try {
+            const nextButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
+            const labels = await newPage.$$('label.ui-label-radio');
+            if (labels.length >= 1) {
+              const i = Math.floor(Math.random() * labels.length);
+              await labels[i].click();
+            }
+            nextButton.hover();
+            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            await Promise.all([
+              newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
+              nextButton.click()
+            ]);
+          } catch (e) {
+            if (!(e instanceof TimeoutError)) { throw e; }
+            // タイムアウトの場合は要素が見つからなかった
+            break;
+          }
+        }
+        const exchangeLink = await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000});
+        await Promise.all([
+          newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
+          exchangeLink.click()
+        ]);
+        await newPage.waitFor(3000); // 3秒待ち
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合は次の処理へ進む
+        console.log(e.message);
+      }
+      await newPage.close(); // 新ウインドウを消す
     }
   } catch (e) {
     console.log(e);
