@@ -70,7 +70,7 @@ const argv = yargs.argv;
           page.waitForSelector('div.tokusen_bnr_r a[href*="/cm/click"]', {visible: true})
             .then(a => a.click())
         ]);
-        await newPage.waitFor(3000); // 3秒待ち
+        await newPage.waitFor(3000); // 3秒待ち（本当はdocumentloadedを待ちたい）
         // 新ウインドウを消す
         await newPage.close();
       } catch (e) {
@@ -84,21 +84,6 @@ const argv = yargs.argv;
     async function shufoo(page) {
       await page.goto('http://www.chobirich.com/contents/shufoo/', {waitUntil: "domcontentloaded"});
 
-      // 郵便番号設定
-      try {
-        await page.waitForSelector('input[name="zipcode"]', {visible: true, timeout: 10000})
-          .then(el => el.type(config['zipcode']));
-        await Promise.all([
-          page.waitForNavigation({waitUntil: "domcontentloaded"}),
-          page.waitForSelector('input[type="submit"]', {visible: true})
-            .then(el => el.click())
-        ]);
-      } catch (e) {
-        if (!(e instanceof TimeoutError)) { throw e; }
-        // タイムアウトの場合は郵便番号設定済み？
-        console.log(e.message);
-      }
-
       let newPage;
       try {
         [newPage] = await Promise.all([
@@ -109,21 +94,17 @@ const argv = yargs.argv;
         ]);
         // iframeを取り出す
         await newPage.waitForSelector('iframe[src*="pcoem/chobirich"]', {visible:true});
-        const frame = await newPage.frames().find(f => f.url().match(/pcoem\/chobirich/));
-        if (!frame) {
-          console.log('frame not found?')
-          return;
-        }
+        const frame = await my.waitForFrame(newPage, f => /pcoem\/chobirich/.test(f.url()));
         // 拡大ボタンクリック
         try {
           await frame.waitForSelector('div.zoomInButton', {visible: true})
-            .then(el => el.click())
+            .then(el => el.click());
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は新ウインドウが開いていないのでそのまま戻る
           console.log(e.message);
         }
-        await newPage.waitFor(3000); // 3秒待ち
+        await newPage.waitFor(3000); // 3秒待ち（本当は拡大終了を待ちたい）
         // 新ウインドウを消す
         await newPage.close();
       } catch (e) {
@@ -153,9 +134,9 @@ const argv = yargs.argv;
     // ビンゴ（3時更新）
     async function bingo(page) {
       await page.goto('http://www.chobirich.com/game/bingo/', {waitUntil: "domcontentloaded"});
-      // iframeロード待ち
-      const frameElem = await page.waitForSelector('iframe[src*="ebingo.jp"]', {visible:true});
-      const frame = await page.frames().find(f => f.url().match(/ebingo\.jp/));
+      // iframeを取り出す
+      await page.waitForSelector('iframe[src*="ebingo.jp"]', {visible:true});
+      const frame = await my.waitForFrame(page, f => /ebingo\.jp/.test(f.url()));
       let newlyMarked = false;
       try {
         // 当選ビンゴマスがあるかぎりクリック
@@ -167,7 +148,6 @@ const argv = yargs.argv;
             img.click()
           ]);
           newlyMarked = true;
-          await page.waitFor(2000); // 2秒待ち（連打防止）
         }
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }

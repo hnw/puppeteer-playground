@@ -3,6 +3,21 @@ const fs = require('fs');
 let config;
 
 module.exports = {
+  waitForFrame: function (page, func) {
+    let fulfill;
+    const promise = new Promise(x => fulfill = x);
+    checkFrame();
+    return promise;
+
+    function checkFrame() {
+      const frame = page.frames().find(func);
+      if (frame) {
+        fulfill(frame);
+      } else {
+        page.once('framenavigated', checkFrame);
+      }
+    }
+  },
   // Puppeteerのscreenshot関数を受け取ってSlackにアップロード
   postError: function (err) {
     const msg = `\`\`\`${err.stack}\`\`\``;

@@ -28,6 +28,7 @@ const argv = yargs.argv;
     const point = await getCurrentPoint(page);
     await forest(page);
     await race(page);
+    await shufoo(page);
     await train(page);
     my.postEarnedSummary('げん玉', point, await getCurrentPoint(page), 0.1);
 
@@ -147,6 +148,41 @@ const argv = yargs.argv;
       }
     }
 
+    // チラシ（6時・20時更新）
+    async function shufoo(page) {
+      await page.goto('http://www.gendama.jp/shufoo', {waitUntil: "domcontentloaded"});
+
+      let newPage;
+      try {
+        [newPage] = await Promise.all([
+          // 新ウインドウ遷移（target=_blank）待ち
+          new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
+          page.waitForSelector('li.content_flyer a', {visible: true})
+            .then(el => el.click())
+        ]);
+        // iframeを取り出す
+        await newPage.waitForSelector('iframe[src*="pcoem/gendama"]', {visible:true});
+        const frame = await my.waitForFrame(newPage, f => /pcoem\/gendama/.test(f.url()));
+        // 拡大ボタンクリック
+        try {
+          await frame.waitForSelector('div.zoomInButton', {visible: true})
+            .then(el => el.click());
+        } catch (e) {
+          if (!(e instanceof TimeoutError)) { throw e; }
+          // タイムアウトの場合は新ウインドウが開いていないのでそのまま戻る
+          console.log(e.message);
+        }
+        await newPage.waitFor(3000); // 3秒待ち（本当は拡大終了を待ちたい）
+        // 新ウインドウを消す
+        await newPage.close();
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合は新ウインドウが開いていないのでそのまま戻る
+        console.log(e.message);
+      }
+      return;
+    }
+
     // げん玉電鉄（14時更新）
     async function train(page) {
       await page.goto('http://www.gendama.jp/train/', {waitUntil: "domcontentloaded", timeout: 60000});
@@ -154,11 +190,7 @@ const argv = yargs.argv;
       try {
         // iframeを取り出す
         await page.waitForSelector('iframe[src*="sugoroku64.ad-link.jp"]', {visible:true});
-        const frame = await page.frames().find(f => f.url().match(/sugoroku64\.ad-link\.jp/));
-        if (!frame) {
-          console.log('frame not found?')
-          return;
-        }
+        const frame = await my.waitForFrame(page, f => /sugoroku64\.ad-link\.jp/.test(f.url()));
         await frame.waitForSelector('canvas', {visible: true})
           .then(el => el.hover());
       } catch (e) {

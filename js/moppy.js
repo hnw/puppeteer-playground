@@ -29,7 +29,7 @@ const argv = yargs.argv;
     await gacha(page);
     await bingo(page);
     await click(page);
-    await flyer(page);
+    await shufoo(page);
     my.postEarnedSummary('モッピー', point, await getCurrentPoint(page), 1);
 
     // ログインページ
@@ -110,14 +110,13 @@ const argv = yargs.argv;
           new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
           a.click()
         ]);
-        await newPage.waitFor(15000); // 15秒待ち
+        await newPage.waitFor(15000); // 15秒待ち（遷移待ち）
         await newPage.close(); // 新ウインドウを消す
       }
-      await page.waitFor(5000); // 5秒待ち
     }
 
     // チラシ（6時・20時更新）
-    async function flyer(page) {
+    async function shufoo(page) {
       await page.goto('http://pc.moppy.jp/', {waitUntil: "domcontentloaded"});
       let newPage;
       [newPage] = await Promise.all([
@@ -126,7 +125,6 @@ const argv = yargs.argv;
         await page.waitForSelector('section.everyday-point a[href*="/flyer/moppy"]', {visible: true})
           .then(a => a.click())
       ]);
-
       try {
         let newPage2;
         [newPage2] = await Promise.all([
@@ -137,21 +135,17 @@ const argv = yargs.argv;
         ]);
         // iframeを取り出す
         await newPage2.waitForSelector('iframe[src*="pcoem/moppy"]', {visible:true});
-        const frame = await newPage2.frames().find(f => f.url().match(/pcoem\/moppy/));
-        if (!frame) {
-          console.log('frame not found?')
-          return;
-        }
+        const frame = await my.waitForFrame(newPage2, f => /pcoem\/moppy/.test(f.url()));
         // 拡大ボタンクリック
         try {
           await frame.waitForSelector('div.zoomInButton', {visible: true})
-            .then(el => el.click())
+            .then(el => el.click());
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は新ウインドウが開いていないのでそのまま戻る
           console.log(e.message);
         }
-        await newPage2.waitFor(3000); // 3秒待ち
+        await newPage2.waitFor(3000); // 3秒待ち（本当は拡大終了を待ちたい）
         // 新ウインドウを消す
         await newPage2.close();
       } catch (e) {
@@ -159,7 +153,6 @@ const argv = yargs.argv;
         // タイムアウトの場合は新ウインドウが開いていないのでそのまま戻る
         console.log(e.message);
       }
-      await newPage.waitFor(10000); // 10秒待ち
       
       // ウインドウを消す
       await newPage.close();
