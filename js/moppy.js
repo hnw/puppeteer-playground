@@ -34,7 +34,7 @@ const argv = yargs.argv;
     await anzan(page);
     await calendar(page);
     await bingo(page);
-    await page.waitFor(60000); // 60秒待ち（ポイント反映待ち）
+    await page.waitFor(200000); // 200秒待ち（ポイント反映待ち）
     my.postEarnedSummary('モッピー', point, await getCurrentPoint(page), 1);
 
     // ログインページ
@@ -69,14 +69,21 @@ const argv = yargs.argv;
     async function gacha(page) {
       await page.goto('http://pc.moppy.jp/pc_gacha/', {waitUntil: "domcontentloaded"});
       try {
+        // 「いますぐ遊ぶ」ボタン
         await page.waitForSelector('img[src*="startbtn.png"]', {visible: true, timeout: 10000})
           .then(img => img.click());
+        // ガチャのハンドル
         await page.waitForSelector('img[src*="bar1.png"]', {visible: true})
           .then(img => img.click());
+        // 「結果を見る」ボタン
         await page.waitForSelector('img[src*="endbtn.png"]', {visible: true})
           .then(img => img.click())
-        await page.waitForSelector('img[src*="gacha/468x60.jpg"]', {visible: true})
-          .then(img => img.click())
+        // セーブボタン（要確認）
+        const saveButton = await page.waitForSelector('img[src*="gacha/468x60.jpg"]', {visible: true});
+        await Promise.all([
+          newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
+          saveButton.click()
+        ]);
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は次の処理へ進む
@@ -236,10 +243,14 @@ const argv = yargs.argv;
             break;
           }
         }
-        const exchangeLink = await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000});
+        // ゲーム終了時トップページ
+        await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000})
+          .then(el => el.click());
+        // スタンプ交換ページ
+        const exchangeButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
         await Promise.all([
           newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
-          exchangeLink.click()
+          exchangeButton.click()
         ]);
         await newPage.waitFor(3000); // 3秒待ち
       } catch (e) {
