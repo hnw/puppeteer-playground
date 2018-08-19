@@ -94,6 +94,15 @@ const argv = yargs.argv;
           .then(img => img.click());
         await page.waitForSelector('img[src*="btn_play_finish.png"]', {visible: true})
           .then(img => img.click());
+        // オーバーレイ広告がもし出ていればclose
+        try {
+          const closeButton = await newPage.waitForSelector('div.delete a', {visible: true, timeout: 10000});
+          closeButton.click()
+        } catch (e) {
+          if (!(e instanceof TimeoutError)) { throw e; }
+          // タイムアウトの場合は要素が見つからなかった
+          console.log(e.message);
+        }
         await page.waitForSelector('p.bingo__btnWrapper', {visible: true})
           .then(el => el.click());
       } catch (e) {
@@ -205,6 +214,7 @@ const argv = yargs.argv;
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
+            console.log(e.message);
           }
           try {
             const nextButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
@@ -222,6 +232,7 @@ const argv = yargs.argv;
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
+            console.log(e.message);
             break;
           }
         }
