@@ -66,7 +66,6 @@ const argv = yargs.argv;
           page.waitForNavigation({waitUntil: "domcontentloaded"}),
           button.click()
         ]);
-        await newPage.waitFor(5000); // 5秒待ち
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は次の処理へ進む
@@ -90,14 +89,12 @@ const argv = yargs.argv;
           new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
           a.click(),
         ]);
-        await newPage.waitFor(3000); // 3秒待ち
         try {
           const button = await newPage.waitForSelector('button#btnLot', {visible: true, timeout: 10000});
           await Promise.all([
             newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
             button.click()
           ]);
-          await newPage.waitFor(3000); // 3秒待ち
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は次の処理へ進む
