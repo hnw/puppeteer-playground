@@ -39,6 +39,7 @@ const argv = yargs.argv;
 
     // ログインページ
     async function login(page) {
+      console.log('login()');
       await page.goto('https://ssl.pc.moppy.jp/login/', {waitUntil: "domcontentloaded"});
 
       await page.waitForSelector('input[name="mail"]', {visible: true})
@@ -55,6 +56,7 @@ const argv = yargs.argv;
 
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
+      console.log('getCurrentPoint()');
       await page.goto('http://pc.moppy.jp/bankbook/', {waitUntil: "domcontentloaded"});
       // ポイントが書いてある要素を取り出す
       const div = await page.$('div.point div.data');
@@ -67,6 +69,7 @@ const argv = yargs.argv;
 
     // ガチャ（2時更新）
     async function gacha(page) {
+      console.log('gacha()');
       await page.goto('http://pc.moppy.jp/pc_gacha/', {waitUntil: "domcontentloaded"});
       try {
         // 「いますぐ遊ぶ」ボタン
@@ -94,6 +97,7 @@ const argv = yargs.argv;
 
     // カジノビンゴ（0時・12時更新）
     async function bingo(page) {
+      console.log('bingo()');
       await page.goto('http://pc.moppy.jp/gamecontents/bingo_pc/', {waitUntil: "domcontentloaded"});
 
       try {
@@ -122,6 +126,7 @@ const argv = yargs.argv;
 
     // クリックで貯める
     async function click(page) {
+      console.log('click()');
       await page.goto('http://pc.moppy.jp/cc/', {waitUntil: "domcontentloaded"});
       const anchors = await page.$$('div.main a.coin-every');
       for (let a of anchors) {
@@ -138,6 +143,7 @@ const argv = yargs.argv;
 
     // チラシ（6時・20時更新）
     async function shufoo(page) {
+      console.log('shufoo()');
       await page.goto('http://pc.moppy.jp/', {waitUntil: "domcontentloaded"});
       let newPage;
       [newPage] = await Promise.all([
@@ -181,28 +187,33 @@ const argv = yargs.argv;
 
     // クイズ（0,8,16時更新）
     async function quiz(page) {
+      console.log('quiz()');
       return await _quiz(page, 'title_quiz.png');
     }
 
     // 英単語TEST（0,12時更新）
     async function eitango(page) {
+      console.log('eitango()');
       return await _quiz(page, 'title_eitango.png');
     }
 
     // ANZAN（0,12時更新）
     async function anzan(page) {
+      console.log('anzan()');
       return await _quiz(page, 'title_anzan.png');
     }
 
     // この日何曜日?（0,12時更新）
     async function calendar(page) {
+      console.log('calendar()');
       return await _quiz(page, 'title_calendar.png');
     }
 
     // クイズ系の共通処理
     async function _quiz(page, linkImage) {
+      console.log('_quiz()');
       await page.goto('http://pc.moppy.jp/gamecontents/', {waitUntil: "domcontentloaded"});
-
+      console.log(1);
       let newPage;
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
@@ -210,6 +221,7 @@ const argv = yargs.argv;
         page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true})
           .then(img => img.click())
       ]);
+      console.log(2);
       try {
         while (true) {
           // オーバーレイ広告がもし出ていればclose
@@ -223,6 +235,7 @@ const argv = yargs.argv;
             // タイムアウトの場合は要素が見つからなかった
             console.log(e.message);
           }
+          console.log(3);
           try {
             const nextButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
             const labels = await newPage.$$('label.ui-label-radio');
@@ -230,12 +243,15 @@ const argv = yargs.argv;
               const i = Math.floor(Math.random() * labels.length);
               await labels[i].click();
             }
+            console.log(4);
             nextButton.hover();
+            console.log(5);
             await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
             await Promise.all([
               newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
               nextButton.click()
             ]);
+            console.log(6);
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
@@ -243,9 +259,11 @@ const argv = yargs.argv;
             break;
           }
         }
+        console.log(7);
         // ゲーム終了時トップページ
         await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000})
           .then(el => el.click());
+        console.log(8);
         // スタンプ交換ページ
         const exchangeButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
         await Promise.all([
@@ -258,6 +276,7 @@ const argv = yargs.argv;
         // タイムアウトの場合は次の処理へ進む
         console.log(e.message);
       }
+      console.log(9);
       await newPage.close(); // 新ウインドウを消す
     }
   } catch (e) {
