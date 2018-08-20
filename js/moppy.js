@@ -107,7 +107,7 @@ const argv = yargs.argv;
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
-          const closeButton = await newPage.waitForSelector('div.delete a', {visible: true, timeout: 10000});
+          const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 10000});
           closeButton.click()
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
@@ -210,16 +210,24 @@ const argv = yargs.argv;
     }
 
     // クイズ系の共通処理
-    async function _quiz(page, linkImage) {
+    async function _quiz(page, linkImage, retry = 3) {
       console.log('_quiz()');
+      if (retry <= 0) return;
       await page.goto('http://pc.moppy.jp/gamecontents/', {waitUntil: "domcontentloaded"});
       console.log(1);
-      let newPage;
+      let titleImage, newPage;
+      try {
+        titleImage = await page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true, timeout: 10000});
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合はリトライ
+        console.log(e.message);
+        return await _quiz(page, linkImage, retry - 1);
+      }
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
         new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-        page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true})
-          .then(img => img.click())
+        titleImage.click()
       ]);
       console.log(2);
       try {
@@ -228,7 +236,7 @@ const argv = yargs.argv;
           try {
             const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
             closeButton.hover();
-            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
             closeButton.click()
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
@@ -246,7 +254,7 @@ const argv = yargs.argv;
             console.log(4);
             nextButton.hover();
             console.log(5);
-            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
             await Promise.all([
               newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
               nextButton.click()

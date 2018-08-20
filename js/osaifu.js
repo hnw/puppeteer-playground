@@ -26,17 +26,19 @@ const argv = yargs.argv;
   try {
     await login(page);
     const point = await getCurrentPoint(page);
-    await quiz(page);
-    await eitango(page);
+    await stamp(page);
     await anzan(page);
-    await calendar(page);
     await shufoo(page);
+    await eitango(page);
+    await calendar(page);
+    await quiz(page);
     await click(page);
-    await page.waitFor(60000); // 60秒待ち（ポイント反映待ち）
+    await page.waitFor(200000); // 200秒待ち（ポイント反映待ち）
     my.postEarnedSummary('お財布.com', point, await getCurrentPoint(page), 1);
 
     // ログインページ
     async function login(page) {
+      console.log('login()');
       await page.goto('https://osaifu.com/login/', {waitUntil: "domcontentloaded"});
 
       await page.waitForSelector('input[name="_username"]', {visible: true})
@@ -53,6 +55,7 @@ const argv = yargs.argv;
 
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
+      console.log('getCurrentPoint()');
       await page.goto('https://osaifu.com/my-osaifu/', {waitUntil: "domcontentloaded"});
       // ポイントが書いてある要素を取り出す
       const nCoinText = await page.$eval('div.osaifu__data dl:nth-child(1) dd em', el => el.textContent.replace(/[,\s]/g, ''));
@@ -62,8 +65,26 @@ const argv = yargs.argv;
       return nCoin + nGold * 0.1;
     }
 
+    // スタンプラリー
+    async function stamp(page) {
+      console.log('stamp()');
+      await page.goto('http://osaifu.com/stamprally/', {waitUntil: "domcontentloaded"});
+      try {
+        // スタンプ
+        await page.waitForSelector('ul.stamp-pc a', {visible: true, timeout: 10000})
+          .then(el => el.click());
+        // 「コインGET!!」
+        await page.waitForSelector('a.a-btn-cvn', {visible: true});
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // 今日は獲得済み?
+        console.log(e.message);
+      }
+    }
+
     // クリックで貯める
     async function click(page) {
+      console.log('click()');
       await page.goto('http://osaifu.com/', {waitUntil: "domcontentloaded"});
       const anchors = await page.$$('section[data-block-title="クリックで貯める"] li a');
       for (let a of anchors) {
@@ -99,6 +120,7 @@ const argv = yargs.argv;
 
     // チラシ（6時・20時更新）
     async function shufoo(page) {
+      console.log('shufoo()');
       await page.goto('http://osaifu.com/coinland/', {waitUntil: "domcontentloaded"});
       let newPage1;
       [newPage1] = await Promise.all([
@@ -114,6 +136,7 @@ const argv = yargs.argv;
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は要素が見つからなかった、先に進む
+        console.log(e.message);
       }
       try {
         let newPage2;
@@ -144,47 +167,63 @@ const argv = yargs.argv;
 
     // クイズ（0,8,16時更新）
     async function quiz(page) {
+      console.log('quiz()');
       return await _quiz(page, 'icon-adquiz.png');
     }
 
     // 英単語TEST（0,12時更新）
     async function eitango(page) {
+      console.log('eitango()');
       return await _quiz(page, 'icon-eitango.png');
     }
 
     // ANZAN（0,12時更新）
     async function anzan(page) {
+      console.log('anzan()');
       return await _quiz(page, 'icon-anzan.png');
     }
 
     // この日何曜日?（0,12時更新）
     async function calendar(page) {
+      console.log('calendar()');
       return await _quiz(page, 'icon-whatday.png');
     }
 
     // クイズ系の共通処理
-    async function _quiz(page, linkImage) {
+    async function _quiz(page, linkImage, retry = 3) {
+      console.log('_quiz()');
+      if (retry <= 0) return;
       await page.goto('http://osaifu.com/coinland/', {waitUntil: "domcontentloaded"});
-
-      let newPage;
+      console.log(1);
+      let titleImage, newPage;
+      try {
+        titleImage = await page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true, timeout: 10000});
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合はリトライ
+        console.log(e.message);
+        return await _quiz(page, linkImage, retry - 1);
+      }
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
         new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-        page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true})
-          .then(img => img.click())
+        titleImage.click()
       ]);
+      console.log(2);
       try {
         while (true) {
           // オーバーレイ広告がもし出ていればclose
           try {
             const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
             closeButton.hover();
-            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
             closeButton.click()
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
+            console.log(e.message);
           }
+          console.log(3);
           try {
             const nextButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
             const labels = await newPage.$$('label.ui-label-radio');
@@ -192,22 +231,32 @@ const argv = yargs.argv;
               const i = Math.floor(Math.random() * labels.length);
               await labels[i].click();
             }
+            console.log(4);
             nextButton.hover();
-            await newPage.waitFor(1000); // 1秒待ち（おじゃま広告を避ける時間）
+            console.log(5);
+            await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
             await Promise.all([
               newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
               nextButton.click()
             ]);
+            console.log(6);
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
+            console.log(e.message);
             break;
           }
         }
-        const exchangeLink = await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000});
+        console.log(7);
+        // ゲーム終了時トップページ
+        await newPage.waitForSelector('a.stamp__btn[href*="/exchange"]', {visible: true, timeout: 10000})
+          .then(el => el.click());
+        console.log(8);
+        // スタンプ交換ページ
+        const exchangeButton = await newPage.waitForSelector('input[type="submit"]', {visible: true, timeout: 10000});
         await Promise.all([
           newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
-          exchangeLink.click()
+          exchangeButton.click()
         ]);
         await newPage.waitFor(3000); // 3秒待ち
       } catch (e) {
