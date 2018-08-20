@@ -84,7 +84,7 @@ const argv = yargs.argv;
         // セーブボタン（要確認）
         const saveButton = await page.waitForSelector('img[src*="gacha/468x60.jpg"]', {visible: true});
         await Promise.all([
-          newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
+          page.waitForNavigation({waitUntil: "domcontentloaded"}),
           saveButton.click()
         ]);
       } catch (e) {
