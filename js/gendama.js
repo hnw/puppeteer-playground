@@ -34,6 +34,7 @@ const argv = yargs.argv;
 
     // ログインページ
     async function login(page) {
+      console.log('login()');
       await page.goto('http://www.realworld.jp/connect_epark?goto=http%3A%2F%2Fwww.gendama.jp%2Fwelcome', {waitUntil: "domcontentloaded"});
       await page.waitForSelector('input[name="auth_login[username]"]', {visible: true})
         .then(el => el.type(config['epark']['userid']));
@@ -49,6 +50,7 @@ const argv = yargs.argv;
 
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
+      console.log('getCurrentPoint()');
       await page.goto('http://u.realworld.jp/passbook/search/gendama/', {waitUntil: "domcontentloaded"});
       // ポイントが書いてある要素を取り出す（ゴミ付き…）
       let nPointText = await page.$eval('dl.now dd', el => el.textContent);
@@ -63,6 +65,7 @@ const argv = yargs.argv;
 
     // ポイントの森（4時・16時更新）
     async function forest(page) {
+      console.log('forest()');
       await page.goto('http://www.gendama.jp/forest/', {waitUntil: "domcontentloaded"});
       // 5pt
       try {
@@ -122,6 +125,7 @@ const argv = yargs.argv;
 
     // モリモリ選手権（0時更新）
     async function race(page) {
+      console.log('race()');
       await page.goto('http://www.gendama.jp/race/', {waitUntil: "domcontentloaded"});
       // 前日分の結果をみる（もしあれば）
       try {
@@ -150,6 +154,7 @@ const argv = yargs.argv;
 
     // チラシ（6時・20時更新）
     async function shufoo(page) {
+      console.log('shufoo()');
       await page.goto('http://www.gendama.jp/shufoo', {waitUntil: "domcontentloaded"});
 
       let newPage;
@@ -185,6 +190,7 @@ const argv = yargs.argv;
 
     // げん玉電鉄（14時更新）
     async function train(page) {
+      console.log('train()');
       await page.goto('http://www.gendama.jp/train/', {waitUntil: "domcontentloaded", timeout: 60000});
 
       try {

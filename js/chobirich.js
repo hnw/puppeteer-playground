@@ -34,6 +34,7 @@ const argv = yargs.argv;
 
     // ログインページ
     async function login(page) {
+      console.log('login()');
       await page.goto('https://www.chobirich.com/connect/with/yahoo', {waitUntil: "domcontentloaded"});
       await page.waitForSelector('input[name="login"]', {visible: true})
         .then(el => el.type(config['yahoo']['userid']));
@@ -50,6 +51,7 @@ const argv = yargs.argv;
 
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
+      console.log('getCurrentPoint()');
       await page.goto('http://www.chobirich.com/mypage/point_details/stamp/', {waitUntil: "domcontentloaded"});
       const nPointText = await page.$eval('div.mypage_navi span.user_pt_n', el => el.textContent);
       const nPoint = parseInt(nPointText, 10);
@@ -60,6 +62,7 @@ const argv = yargs.argv;
 
     // 特選バナー
     async function tokusen(page) {
+      console.log('tokusen()');
       await page.goto('http://www.chobirich.com/', {waitUntil: "domcontentloaded"});
 
       let newPage;
@@ -82,6 +85,7 @@ const argv = yargs.argv;
 
     // チラシ（6時・20時更新）
     async function shufoo(page) {
+      console.log('shufoo()');
       await page.goto('http://www.chobirich.com/contents/shufoo/', {waitUntil: "domcontentloaded"});
 
       let newPage;
@@ -117,6 +121,7 @@ const argv = yargs.argv;
 
     // スタンプゲット
     async function stamp(page) {
+      console.log('stamp()');
       await page.goto('http://www.chobirich.com/earn', {waitUntil: "domcontentloaded"});
       const images = await page.$$('div.clickstamp_list img');
       for (let image of images) {
@@ -133,6 +138,7 @@ const argv = yargs.argv;
 
     // ビンゴ（3時更新）
     async function bingo(page) {
+      console.log('bingo()');
       await page.goto('http://www.chobirich.com/game/bingo/', {waitUntil: "domcontentloaded"});
       // iframeを取り出す
       await page.waitForSelector('iframe[src*="ebingo.jp"]', {visible:true});
