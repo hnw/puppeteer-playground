@@ -3,6 +3,11 @@ const fs = require('fs');
 let config;
 
 module.exports = {
+  goto: async function (page, url) {
+    await page.goto(url);
+    await page.waitForNavigation({waitUntil: 'load'});
+    await page.waitForNavigation({waitUntil: 'networkidle0'});
+  }
   waitForFrame: function (page, func) {
     let fulfill;
     const promise = new Promise(x => fulfill = x);
@@ -35,7 +40,7 @@ module.exports = {
   },
   // 稼いだポイントの情報をSlackに通知
   postEarnedSummary: function (siteName, prevPoint, currPoint, rate) {
-    let earnedPoint = Math.round((currPoint - prevPoint) * 10) / 10;
+    const earnedPoint = Math.round((currPoint - prevPoint) * 10) / 10; // 小数点以下1位まで有効
     const earnedYen = earnedPoint * rate;
     let text = '';
     if (earnedPoint === 0.0) {
