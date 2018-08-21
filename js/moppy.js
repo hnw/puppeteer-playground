@@ -40,7 +40,7 @@ const argv = yargs.argv;
     // ログインページ
     async function login(page) {
       console.log('login()');
-      await page.goto('https://ssl.pc.moppy.jp/login/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'https://ssl.pc.moppy.jp/login/')
 
       await page.waitForSelector('input[name="mail"]', {visible: true})
         .then(el => el.type(config['userid']));
@@ -57,7 +57,7 @@ const argv = yargs.argv;
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
       console.log('getCurrentPoint()');
-      await page.goto('http://pc.moppy.jp/bankbook/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/bankbook/');
       // ポイントが書いてある要素を取り出す
       const div = await page.$('div.point div.data');
       const nPointText = await div.$eval('strong', el => el.textContent.replace(/[,\s]/g, ''));
@@ -70,7 +70,7 @@ const argv = yargs.argv;
     // ガチャ（2時更新）
     async function gacha(page) {
       console.log('gacha()');
-      await page.goto('http://pc.moppy.jp/pc_gacha/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/pc_gacha/');
       try {
         // 「いますぐ遊ぶ」ボタン
         await page.waitForSelector('img[src*="startbtn.png"]', {visible: true, timeout: 10000})
@@ -98,7 +98,7 @@ const argv = yargs.argv;
     // カジノビンゴ（0時・12時更新）
     async function bingo(page) {
       console.log('bingo()');
-      await page.goto('http://pc.moppy.jp/gamecontents/bingo_pc/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/gamecontents/bingo_pc/');
 
       try {
         await page.waitForSelector('img[src*="btn_roulette.png"]', {visible: true, timeout: 10000})
@@ -127,7 +127,7 @@ const argv = yargs.argv;
     // クリックで貯める
     async function click(page) {
       console.log('click()');
-      await page.goto('http://pc.moppy.jp/cc/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/cc/');
       const anchors = await page.$$('div.main a.coin-every');
       for (let a of anchors) {
         let newPage;
@@ -144,7 +144,7 @@ const argv = yargs.argv;
     // チラシ（6時・20時更新）
     async function shufoo(page) {
       console.log('shufoo()');
-      await page.goto('http://pc.moppy.jp/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/');
       let newPage;
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
@@ -213,7 +213,7 @@ const argv = yargs.argv;
     async function _quiz(page, linkImage, retry = 3) {
       console.log('_quiz()');
       if (retry <= 0) return;
-      await page.goto('http://pc.moppy.jp/gamecontents/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://pc.moppy.jp/gamecontents/');
       console.log(0);
       let titleImage, newPage;
       try {

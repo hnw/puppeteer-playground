@@ -39,7 +39,7 @@ const argv = yargs.argv;
     // ログインページ
     async function login(page) {
       console.log('login()');
-      await page.goto('https://osaifu.com/login/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'https://osaifu.com/login/');
 
       await page.waitForSelector('input[name="_username"]', {visible: true})
         .then(el => el.type(config['userid']));
@@ -56,7 +56,7 @@ const argv = yargs.argv;
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
       console.log('getCurrentPoint()');
-      await page.goto('https://osaifu.com/my-osaifu/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'https://osaifu.com/my-osaifu/');
       // ポイントが書いてある要素を取り出す
       const nCoinText = await page.$eval('div.osaifu__data dl:nth-child(1) dd em', el => el.textContent.replace(/[,\s]/g, ''));
       const nGoldText = await page.$eval('div.osaifu__data dl:nth-child(3) dd em', el => el.textContent.replace(/[,\s]/g, ''));
@@ -68,7 +68,7 @@ const argv = yargs.argv;
     // スタンプラリー
     async function stamp(page) {
       console.log('stamp()');
-      await page.goto('http://osaifu.com/stamprally/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://osaifu.com/stamprally/');
       try {
         // スタンプ
         await page.waitForSelector('ul.stamp-pc a', {visible: true, timeout: 10000})
@@ -85,7 +85,7 @@ const argv = yargs.argv;
     // クリックで貯める
     async function click(page) {
       console.log('click()');
-      await page.goto('http://osaifu.com/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://osaifu.com/');
       const anchors = await page.$$('section[data-block-title="クリックで貯める"] li a');
       for (let a of anchors) {
         // リンクを別ウインドウで開くようにする
@@ -121,7 +121,7 @@ const argv = yargs.argv;
     // チラシ（6時・20時更新）
     async function shufoo(page) {
       console.log('shufoo()');
-      await page.goto('http://osaifu.com/coinland/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://osaifu.com/coinland/');
       let newPage1;
       [newPage1] = await Promise.all([
         // 新ウインドウ1への遷移（target=_blank）待ち
@@ -193,7 +193,7 @@ const argv = yargs.argv;
     async function _quiz(page, linkImage, retry = 3) {
       console.log('_quiz()');
       if (retry <= 0) return;
-      await page.goto('http://osaifu.com/coinland/', {waitUntil: "domcontentloaded"});
+      await my.goto(page, 'http://osaifu.com/coinland/');
       console.log(0);
       let titleImage, newPage;
       try {
