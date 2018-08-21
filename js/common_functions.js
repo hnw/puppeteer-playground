@@ -4,7 +4,13 @@ let config;
 
 module.exports = {
   goto: async function (page, url) {
-    await page.goto(url, {waitUntil: 'networkidle2'});
+    await Promise.all([
+      Promise.race([
+        page.waitForNavigation({waitUntil: 'domcontentloaded'}),
+        page.waitForNavigation({waitUntil: 'networkidle0'})
+      ]),
+      page.goto(url)
+    ])
   },
   waitForFrame: function (page, func) {
     let fulfill;
