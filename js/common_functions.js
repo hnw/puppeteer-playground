@@ -7,7 +7,7 @@ module.exports = {
     await page.goto(url);
     await page.waitForNavigation({waitUntil: 'load'});
     await page.waitForNavigation({waitUntil: 'networkidle0'});
-  }
+  },
   waitForFrame: function (page, func) {
     let fulfill;
     const promise = new Promise(x => fulfill = x);
