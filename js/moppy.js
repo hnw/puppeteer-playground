@@ -108,14 +108,16 @@ const argv = yargs.argv;
         // オーバーレイ広告がもし出ていればclose
         try {
           const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 10000});
-          closeButton.click()
+          await closeButton.click();
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は要素が見つからなかった
           console.log(e.message);
         }
+        console.log(88);
         await page.waitForSelector('p.bingo__btnWrapper', {visible: true})
           .then(el => el.click());
+        console.log(89);
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は次の処理へ進む
@@ -236,9 +238,9 @@ const argv = yargs.argv;
           // オーバーレイ広告がもし出ていればclose
           try {
             const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
-            closeButton.hover();
+            await closeButton.hover();
             await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
-            closeButton.click()
+            await closeButton.click()
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
             // タイムアウトの場合は要素が見つからなかった
