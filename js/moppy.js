@@ -144,12 +144,12 @@ const argv = yargs.argv;
     // チラシ（6時・20時更新）
     async function shufoo(page) {
       console.log('shufoo()');
-      await my.goto(page, 'http://pc.moppy.jp/');
+      await my.goto(page, 'http://pc.moppy.jp/gamecontents/');
       let newPage;
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
         new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-        await page.waitForSelector('section.everyday-point a[href*="/flyer/moppy"]', {visible: true})
+        await page.waitForSelector('img[src*="title_flyer.png"', {visible: true})
           .then(a => a.click())
       ]);
       try {
