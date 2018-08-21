@@ -214,7 +214,7 @@ const argv = yargs.argv;
       console.log('_quiz()');
       if (retry <= 0) return;
       await page.goto('http://pc.moppy.jp/gamecontents/', {waitUntil: "domcontentloaded"});
-      console.log(1);
+      console.log(0);
       let titleImage, newPage;
       try {
         titleImage = await page.waitForSelector(`img[src*="${linkImage}"]`, {visible: true, timeout: 10000});
@@ -224,6 +224,7 @@ const argv = yargs.argv;
         console.log(e.message);
         return await _quiz(page, linkImage, retry - 1);
       }
+      console.log(1);
       [newPage] = await Promise.all([
         // 新ウインドウ遷移（target=_blank）待ち
         new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
@@ -255,10 +256,18 @@ const argv = yargs.argv;
             nextButton.hover();
             console.log(5);
             await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
-            await Promise.all([
-              newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
-              nextButton.click()
-            ]);
+            try {
+              await Promise.all([
+                newPage.waitForNavigation({waitUntil: "domcontentloaded"}),
+                nextButton.click()
+              ]);
+            } catch (e) {
+              if (!(e instanceof TimeoutError)) { throw e; }
+              // タイムアウトの場合はリトライ
+              console.log(e.message);
+              await newPage.close(); // 新ウインドウを消す
+              return await _quiz(page, linkImage, retry - 1);
+            }
             console.log(6);
           } catch (e) {
             if (!(e instanceof TimeoutError)) { throw e; }
