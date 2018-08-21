@@ -32,6 +32,7 @@ const argv = yargs.argv;
 
     // ログインページ
     async function login(page) {
+      console.log('login()');
       await page.goto('https://login.yahoo.co.jp/config/login?.src=kuji&card_cushion_skip=1&.done=https://toku.yahoo.co.jp/', {waitUntil: "domcontentloaded"});
       await page.waitForSelector('input[name="login"]', {visible: true})
         .then(el => el.type(config['userid']));
@@ -48,6 +49,7 @@ const argv = yargs.argv;
 
     // 現在ポイントを取得
     async function getCurrentPoint(page) {
+      console.log('getCurrentPoint()');
       await page.goto('https://points.yahoo.co.jp/book', {waitUntil: "domcontentloaded"});
 
       let nPointText = await page.$eval('div#ptbook div.Totalbox dd.typeTotal', el => el.textContent);
@@ -59,6 +61,7 @@ const argv = yargs.argv;
 
     // ズバトク毎日くじ
     async function everydayLot(page) {
+      console.log('everydayLot()');
       await page.goto('https://toku.yahoo.co.jp/everyday/lot/', {waitUntil: "domcontentloaded"});
       try {
         const button = await page.waitForSelector('button#btnLot', {visible: true, timeout: 10000});
@@ -75,6 +78,7 @@ const argv = yargs.argv;
 
     // 開催中くじ
     async function campaignLot(page) {
+      console.log('campaignLot()');
       await page.goto('https://toku.yahoo.co.jp/', {waitUntil: "domcontentloaded"});
       const lotTopUrl = page.url();
       // ページ内の全リンクを別ウインドウで開くようにする
