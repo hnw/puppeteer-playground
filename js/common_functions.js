@@ -4,9 +4,7 @@ let config;
 
 module.exports = {
   goto: async function (page, url) {
-    await page.goto(url);
-    await page.waitForNavigation({waitUntil: 'load'});
-    await page.waitForNavigation({waitUntil: 'networkidle0'});
+    await page.goto(url, {waitUntil: 'networkidle2'});
   },
   waitForFrame: function (page, func) {
     let fulfill;
