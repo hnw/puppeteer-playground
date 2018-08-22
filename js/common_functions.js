@@ -1,3 +1,4 @@
+const {TimeoutError} = require('puppeteer/Errors');
 const request = require('request');
 const fs = require('fs');
 let config;
