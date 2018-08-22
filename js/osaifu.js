@@ -192,7 +192,7 @@ const argv = yargs.argv;
     // クイズ系の共通処理
     async function _quiz(page, linkImage, retry = 3) {
       console.log('_quiz()');
-      if (retry <= 0) return;
+      if (retry < 0) return;
       await my.goto(page, 'http://osaifu.com/coinland/');
       console.log(0);
       let titleImage, newPage;
