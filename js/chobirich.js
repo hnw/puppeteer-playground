@@ -144,13 +144,22 @@ const argv = yargs.argv;
       await page.waitForSelector('iframe[src*="ebingo.jp"]', {visible:true});
       const frame = await my.waitForFrame(page, f => /ebingo\.jp/.test(f.url()));
       let newlyMarked = false;
+      // 初日のみ「参加する」ボタンを押す
       try {
-        // 当選ビンゴマスがあるかぎりクリック
+        const joinButton = await frame.waitForSelector('input[value*="今すぐ参加する"]', {visible: true, timeout: 10000});
+        await joinButton.click();
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // 既に「参加する」ボタンが押されている?
+        console.log(e.message);
+      }
+      // 当選ビンゴマスがあるかぎりクリック
+      try {
         for (let i = 0; i < 5; i++) {
           const img = await frame.waitForSelector('td a img[src*="/bingo/card/"]',
-                                                     {visible: true, timeout: 10000});
+                                                  {visible: true, timeout: 10000});
           await Promise.all([
-            page.waitForNavigation({waitUntil: "domcontentloaded"}),
+            page.waitForNavigation({waitUntil: 'networkidle0'}),
             img.click()
           ]);
           newlyMarked = true;
@@ -158,6 +167,7 @@ const argv = yargs.argv;
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // 当選ビンゴマスがなくなったらタイムアウトで抜ける
+        console.log(e.message);
       }
 
       // BINGOシートをSlackに送信
