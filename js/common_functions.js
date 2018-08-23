@@ -4,7 +4,8 @@ const fs = require('fs');
 let config;
 
 module.exports = {
-  goto: async function (page, url, retry = 3) {
+  goto: async function (page, url, options, retry = 3) {
+    const defaultOptions = {waitUntil: 'domcontentloaded'};
     console.log('my.goto()');
     try {
       await Promise.all([
@@ -12,14 +13,14 @@ module.exports = {
           page.waitForNavigation({waitUntil: 'load'}),
           page.waitForNavigation({waitUntil: 'networkidle0'})
         ]),
-        page.goto(url, {waitUntil: 'domcontentloaded'})
+        page.goto(url, Object.assign({}, defaultOptions, options))
       ])
     } catch (e) {
       if ((e instanceof TimeoutError) && retry <= 0) {
         // タイムアウトならリトライ
         console.log(e.message);
         await page.close();
-        return await module.exports.goto(page, url, retry - 1);
+        return await module.exports.goto(page, url, options, retry - 1);
       } else {
         // タイムアウト以外なら再スロー
         throw e;

@@ -204,8 +204,7 @@ const argv = yargs.argv;
     // げん玉電鉄（14時更新）
     async function train(page) {
       console.log('train()');
-      await my.goto(page, 'http://www.gendama.jp/train/');
-
+      await my.goto(page, 'http://www.gendama.jp/train/', {timeout: 60000});
       try {
         // iframeを取り出す
         await page.waitForSelector('iframe[src*="sugoroku64.ad-link.jp"]', {visible:true});
