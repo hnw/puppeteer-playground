@@ -59,9 +59,10 @@ module.exports = {
   },
   // 稼いだポイントの情報をSlackに通知
   postEarnedSummary: function (siteName, prevPoint, currPoint, rate) {
-    const earnedPoint = Math.round((currPoint - prevPoint) * 10) / 10; // 小数点以下1位まで有効
-    const earnedYen = earnedPoint * rate;
-    let text = '';
+    // どちらも小数第2位まで有効という前提
+    const earnedPoint = +((currPoint - prevPoint).toFixed(2));
+    const earnedYen = +((earnedPoint * rate).toFixed(2));
+    let text;
     if (earnedPoint === 0.0) {
       text = `${siteName}の現在のポイント: ${currPoint}pt`;
     } else {
