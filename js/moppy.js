@@ -81,7 +81,16 @@ const argv = yargs.argv;
         // 「結果を見る」ボタン
         await page.waitForSelector('img[src*="endbtn.png"]', {visible: true})
           .then(img => img.click())
-        // セーブボタン（要確認）
+        // オーバーレイ広告がもし出ていればclose
+        try {
+          const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 10000});
+          await closeButton.click();
+        } catch (e) {
+          if (!(e instanceof TimeoutError)) { throw e; }
+          // タイムアウトの場合は要素が見つからなかった
+          console.log(e.message);
+        }
+        // 「今日のおすすめ広告」
         const saveButton = await page.waitForSelector('img[src*="gacha/468x60.jpg"]', {visible: true});
         await Promise.all([
           page.waitForNavigation({waitUntil: "domcontentloaded"}),
