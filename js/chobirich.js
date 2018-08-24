@@ -159,7 +159,7 @@ const argv = yargs.argv;
           const img = await frame.waitForSelector('td a img[src*="/bingo/card/"]',
                                                   {visible: true, timeout: 10000});
           await Promise.all([
-            page.waitForNavigation({waitUntil: 'networkidle0'}),
+            page.waitForNavigation({waitUntil: 'networkidle2'}),
             img.click()
           ]);
           newlyMarked = true;
