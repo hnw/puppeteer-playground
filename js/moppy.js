@@ -123,6 +123,8 @@ const argv = yargs.argv;
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は要素が見つからなかった
           console.log(e.message);
+          let bodyHTML = await page.evaluate(() => document.body.innerHTML);
+          console.log(bodyHTML);
         }
         console.log(88);
         await page.waitForSelector('p.bingo__btnWrapper', {visible: true})
