@@ -205,12 +205,16 @@ const argv = yargs.argv;
     async function train(page) {
       console.log('train()');
       await my.goto(page, 'http://www.gendama.jp/train/', {timeout: 60000});
+      console.log(0);
       try {
         // iframeを取り出す
         await page.waitForSelector('iframe[src*="sugoroku64.ad-link.jp"]', {visible:true});
+        console.log(1);
         const frame = await my.waitForFrame(page, f => /sugoroku64\.ad-link\.jp/.test(f.url()));
+        console.log(2);
         await frame.waitForSelector('canvas', {visible: true})
           .then(el => el.hover());
+        console.log(3);
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
         // タイムアウトの場合は処理終了

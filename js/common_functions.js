@@ -4,7 +4,7 @@ const fs = require('fs');
 let config;
 
 module.exports = {
-  goto: async function (page, url, options, retry = 3) {
+  goto: async function (page, url, options = {}, retry = 3) {
     const defaultOptions = {waitUntil: 'domcontentloaded'};
     console.log('my.goto()');
     try {
@@ -16,7 +16,7 @@ module.exports = {
         page.goto(url, Object.assign({}, defaultOptions, options))
       ])
     } catch (e) {
-      if ((e instanceof TimeoutError) && retry <= 0) {
+      if ((e instanceof TimeoutError) && retry > 0) {
         // タイムアウトならリトライ
         console.log(e.message);
         await page.close();
