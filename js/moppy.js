@@ -112,6 +112,7 @@ const argv = yargs.argv;
       try {
         await page.waitForSelector('img[src*="btn_roulette.png"]', {visible: true, timeout: 10000})
           .then(img => img.click());
+        // 「結果を見る」
         await page.waitForSelector('img[src*="btn_play_finish.png"]', {visible: true})
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
@@ -310,6 +311,7 @@ const argv = yargs.argv;
   } catch (e) {
     console.log(e);
     my.postError(e);
+    await my.postUrls(browser);
     await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {
