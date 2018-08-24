@@ -41,7 +41,6 @@ const argv = yargs.argv;
         .then(el => el.type(config['epark']['userid']));
       await page.waitForSelector('input[name="auth_login[password]"]', {visible: true})
         .then(el => el.type(config['epark']['password']));
-
       await Promise.all([
         page.waitForNavigation({waitUntil: "domcontentloaded"}),
         page.waitForSelector('button[type="submit"]', {visible: true})
@@ -229,6 +228,7 @@ const argv = yargs.argv;
   } catch (e) {
     console.log(e);
     my.postError(e);
+    await my.postUrls(browser);
     await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {

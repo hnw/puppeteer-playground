@@ -48,6 +48,14 @@ module.exports = {
     const msg = `\`\`\`${err.stack}\`\`\``;
     module.exports.postMessageToSlack(msg, `Error: ${err.message}`);
   },
+  postUrls: async function (browser) {
+    let msg = '';
+    const pages = await browser.pages();
+    for (const page of pages) {
+      msg += `\n${page.url()}`
+    }
+    module.exports.postMessageToSlack(msg, 'URL list');
+  },
   // Puppeteerのobjcetを受け取ってscreenshotをSlackにアップロード
   uploadScreenShot: async function (obj, imagePath) {
     if (typeof(obj.screenshot) !== 'function') {

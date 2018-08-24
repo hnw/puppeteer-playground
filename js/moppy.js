@@ -311,6 +311,7 @@ const argv = yargs.argv;
   } catch (e) {
     console.log(e);
     my.postError(e);
+    await my.postUrls(browser);
     await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {
