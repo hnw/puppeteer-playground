@@ -19,8 +19,8 @@ module.exports = {
       if ((e instanceof TimeoutError) && retry > 0) {
         // タイムアウトならリトライ
         console.log(e.message);
+        const browser = await page.browser();
         await page.close();
-        const browser = page.browser();
         page = await browser.newPage();
         return await module.exports.goto(page, url, options, retry - 1);
       } else {
