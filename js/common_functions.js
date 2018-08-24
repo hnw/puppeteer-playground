@@ -20,6 +20,7 @@ module.exports = {
         // タイムアウトならリトライ
         console.log(e.message);
         await page.close();
+        const browser = page.browser();
         page = await browser.newPage();
         return await module.exports.goto(page, url, options, retry - 1);
       } else {
