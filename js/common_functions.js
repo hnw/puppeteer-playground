@@ -20,8 +20,6 @@ module.exports = {
         // タイムアウトならリトライ
         console.log(e.message);
         const browser = await page.browser();
-        await page.close();
-        page = await browser.newPage();
         return await module.exports.goto(page, url, options, retry - 1);
       } else {
         // タイムアウト以外なら再スロー
