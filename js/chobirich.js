@@ -158,10 +158,8 @@ const argv = yargs.argv;
         for (let i = 0; i < 5; i++) {
           const img = await frame.waitForSelector('td a img[src*="/bingo/card/"]',
                                                   {visible: true, timeout: 10000});
-          await Promise.all([
-            page.waitForNavigation({waitUntil: 'networkidle2'}),
-            img.click()
-          ]);
+          await img.click()
+          await page.waitFor(10000); // 10秒待ち（ページ遷移待ち、他にうまい手が思いつかず）
           newlyMarked = true;
         }
       } catch (e) {
