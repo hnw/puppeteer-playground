@@ -47,13 +47,16 @@ if (options["workdir"]) {
       console.log('login()');
       await my.goto(page, 'https://www.pointtown.com/ptu/mypage/top.do');
       // GMOログインページ
+      console.log(1);
       await page.waitForSelector('form[name="YahooLoginForm"]', {visible: true})
         .then(el => el.click());
       // Yahoo!ログインページ（id）
+      console.log(2);
       await page.waitForSelector('input[name="login"]', {visible: true})
         .then(el => el.type(config['yahoo']['userid']));
       await page.click('button[type="submit"]');
       // Yahoo!ログインページ（pw）
+      console.log(3);
       await page.waitForSelector('input[name="passwd"]', {visible: true})
         .then(el => el.type(config['yahoo']['password']));
       await Promise.all([
@@ -61,11 +64,16 @@ if (options["workdir"]) {
         page.click('button[type="submit"]')
       ]);
       // 秘密の質問
+      console.log(4);
       await page.waitForSelector('input[name="answer"]', {visible: true})
         .then(el => el.type(config['secretanswer']));
+      console.log(5);
       await page.type('input[name="birth_year"]', config['birthyear']);
+      console.log(6);
       await page.select('select[name="birth_month"]', config['birthmonth']);
+      console.log(7);
       await page.select('select[name="birth_day"]', config['birthday']);
+      console.log(8);
       await Promise.all([
         page.waitForNavigation({waitUntil: "domcontentloaded"}),
         page.click('input[type="image"]')
@@ -313,7 +321,7 @@ if (options["workdir"]) {
       console.log('stamprally()');
       await my.goto(page, 'https://www.pointtown.com/ptu/mypage/top');
       try {
-        page.waitForSelector('a.stamp-cl-btn', {visible: true, timeout: 10000})
+        await page.waitForSelector('a.stamp-cl-btn', {visible: true, timeout: 10000})
           .then(el => el.click())
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
@@ -323,9 +331,9 @@ if (options["workdir"]) {
     }
   } catch (e) {
     console.log(e);
-    //my.postError(e);
-    //await my.postUrls(browser);
-    //await my.uploadScreenShot(page, 'error.png');
+    my.postError(e);
+    await my.postUrls(browser);
+    await my.uploadScreenShot(page, 'error.png');
   } finally {
     if (argv.debug) {
       console.log('The script is finished.');
