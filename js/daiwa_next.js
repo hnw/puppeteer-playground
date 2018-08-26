@@ -1,7 +1,18 @@
 const puppeteer = require('puppeteer');
+const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
+const fs = require('fs');
+const request = require('request');
 const scriptName = path.basename(__filename);
+const yargs = require('yargs')
+      .usage('Usage: $0 [options]')
+      .describe('debug', 'Force headful')
+      .help()
+      .version('0.0.1')
+      .locale('en');
+const argv = yargs.argv;
 
+/*
 function usage() {
   console.log('usage: node %s [銀行名] [振込金額]', scriptName)
   process.exit();
@@ -39,35 +50,93 @@ let launchOptions = {
 if (process.arch === 'arm') {
   launchOptions.executablePath = '/usr/bin/chromium-browser';
 }
+*/
 
 (async () => {
-  const browser = await puppeteer.launch(launchOptions);
+  const config = loadConfig(scriptName);
+  const options = Object.assign(config['options'], { headless: !(argv.debug) });
+  const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
-
-  //page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  if (argv.debug) {
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  }
 
   try {
-    await page.goto('https://next.bank-daiwa.co.jp/web/loginPage.do');
-
-    //await page.evaluate(() => console.log(`url is ${location.href}`));
+    if (!await login(page)) {
+      console.log('ERROR: Authentication failed.');
+      process.exit();
+    }
+    let balance = await getBalance();
+    await getRemittanceList()
+    process.exit();
 
     // ログインページ
-    const loginUseridSelector = 'input[name="txtKykuID"]';
-    const loginPasswordSelector = 'input[name="txtLoginPw"]';
-    const loginButtonSelector = 'input[name="BtnLogin"]';
+    async function login(page) {
+      await page.goto('https://next.bank-daiwa.co.jp/web/', {waitUntil: "domcontentloaded"});
 
-    await page.waitForSelector(loginUseridSelector);
-    await page.waitForSelector(loginPasswordSelector),
-    await page.waitForSelector(loginButtonSelector)
+      await page.waitForSelector('input[name="txtKykuID"]', {visible: true})
+        .then(el => el.type(config['userid']));
+      await page.waitForSelector('input[name="txtLoginPw"]', {visible: true})
+        .then(el => el.type(config['password']));
 
-    await page.type(loginUseridSelector, config['userid']);
-    await page.type(loginPasswordSelector, config['password']);
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        page.waitForSelector('input[name="BtnLogin"]', {visible: true})
+          .then(el => el.click())
+      ]);
 
-    await Promise.all([
-      page.waitForNavigation({waitUntil: "domcontentloaded"}),
-      page.click(loginButtonSelector)
-    ]);
+      return (/transactionSiteTop\.do/.test(page.url()));
+    }
 
+    async function getBalance() {
+      // トップページ
+      await page.goto('https://next.bank-daiwa.co.jp/web/transactionSiteTop.do', {waitUntil: "domcontentloaded"});
+      // 「お預かり資産」
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        page.waitForSelector('ul#global-nav a[href*="totalAssetsBalanceTop"]', {visible: true}).then(el => el.click())
+      ]);
+
+      const tr = await page.$('div#accounts-list-panel tbody tr');
+      const label = await tr.$eval('th', el => el.textContent);
+      const value = await tr.$eval('td', el => el.textContent);
+
+      if (!/円普通預金/.test(label)) {
+        throw new Error ('"円普通預金" not found');
+      }
+      if (!/^[0-9,]+円$/.test(value)) {
+        throw new Error ('"円普通預金" might be illegal format: ' + value);
+      }
+      return parseInt(value.replace(/[,円]/, ''), 10);
+    }
+
+    async function getRemittanceList() {
+      // トップページ
+      await page.goto('https://next.bank-daiwa.co.jp/web/transactionSiteTop.do', {waitUntil: "domcontentloaded"});
+      // 「振込/振替」
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        page.waitForSelector('ul#global-nav a[href*="remittanceTop"]', {visible: true}).then(el => el.click())
+      ]);
+
+      const tds = await page.$$('div#registerd-account-list tbody tr td:nth-child(7)');
+      let i = 1;
+      for (let td of tds) {
+        const tr = await page.evaluateHandle(el => el.closest('tr'), td);
+        let name = await tr.$eval('td:nth-child(3)', el => el.textContent);
+        let bank = await tr.$eval('td:nth-child(4)', el => el.textContent);
+        name = name.replace(/\s+/g, ' ');
+        name = name.replace(/(^\s+|\s+$)/g, '');
+        bank = bank.replace(/\s+/g, ' ');
+        bank = bank.replace(/(^\s+|\s+$)/g, '');
+        console.log('[' + i + ']' + bank + ' / ' + name);
+        i++;
+      }
+    }
+
+    //const balanceSelector = '//th[text()="円普通預金残高"]/following-sibling::td[1]';
+
+    /*
         // 「パスワード変更のお願い」ページ
     if (await page.$('input[name="throughFlg"]') !== null) {
       await Promise.all([
@@ -75,8 +144,9 @@ if (process.arch === 'arm') {
         page.click('input[value="変更しない"]')
       ]);
     }
+    */
 
-    let balance;
+
 
     // トップページ
     {
@@ -153,13 +223,46 @@ if (process.arch === 'arm') {
         page.click(submitButtonSelector)
       ]);
     }
-    
+
     // 「お手続き完了」ページ
 
-  } catch (err) {
-    console.log(err);
+  } catch (e) {
+    console.log(e);
   } finally {
-    await page.screenshot({path: 'screenshot.png'});
-    await browser.close();
+    if (argv.debug) {
+      console.log('The script is finished.');
+    } else {
+      await browser.close();
+    }
+  }
+  function uploadToSlack(path) {
+    const data = {
+      url: 'https://slack.com/api/files.upload',
+      formData: {
+        token: config['slack']['token'],
+        file: fs.createReadStream(path),
+        channels: config['slack']['channels'],
+      }
+    };
+    request.post(data, function(error, response, body) {
+      if (!error && response.statusCode == 200) {
+        // do nothing
+      } else {
+        console.log('Upload failure :(');
+      }
+    });
+  }
+  function loadConfig() {
+    let config = require(__dirname + '/../config/config.json');
+    const configName = path.basename(scriptName, '.js');
+    for (i of [configName, 'options', 'slack']) {
+      if (!config[i]) {
+        console.log('ERROR: config[' + i + '] not found');
+        yargs.showHelp();
+        process.exit(1)
+      }
+    }
+    Object.assign(config, config[configName]);
+    return config;
   }
 })();

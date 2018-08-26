@@ -10,15 +10,15 @@ const yargs = require('yargs')
       .version('0.0.1')
       .locale('en');
 const argv = yargs.argv;
+const config = my.loadConfig(path.basename(scriptName, '.js'));
+const options = Object.assign(config['options'], { headless: !(argv.debug) });
+if (options["workdir"]) {
+  process.chdir(options["workdir"]);
+}
 
 (async () => {
-  const config = my.loadConfig(path.basename(scriptName, '.js'));
-  const options = Object.assign(config['options'], { headless: !(argv.debug) });
   const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
-  if (options["workdir"]) {
-    process.chdir(options["workdir"]);
-  }
   if (argv.debug) {
     page.on('console', msg => console.log('PAGE LOG:', msg.text()));
   }
@@ -117,7 +117,7 @@ const argv = yargs.argv;
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
-          const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 10000});
+          const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 20000});
           await closeButton.click();
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
