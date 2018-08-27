@@ -28,8 +28,8 @@ if (options["workdir"]) {
     await login(page);
     const point = await getCurrentPoint(page);
     await amazon(page);
+    await competition(page);
     await pointq(page);
-    await collection(page);
     await click_top(page);
     await click_service(page);
     await click_mypage(page);
@@ -38,6 +38,7 @@ if (options["workdir"]) {
     await usapo(page);
     await kuji(page);
     await shufoo(page);
+    await collection(page);
     await stamprally(page);
     await page.waitFor(10000); // 10秒待ち（ポイント反映待ち）
     my.postEarnedSummary('ポイントタウン', point, await getCurrentPoint(page), 0.05);
@@ -96,6 +97,59 @@ if (options["workdir"]) {
       return nPoint;
     }
 
+    // Amazon商品検索
+    async function amazon(page) {
+      console.log('amazon()');
+      const candidates = ['飲料', '電池', '洗剤'];
+      const searchWord = candidates[Math.floor(Math.random() * candidates.length)];
+      await my.goto(page, 'https://www.pointtown.com/ptu/amazon-search');
+      await page.waitForSelector('input[name="field-keywords-header"]', {visible: true})
+        .then(el => el.type(searchWord));
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        page.click('input[type="button"]')
+      ]);
+    }
+
+    // ポイント争奪戦
+    async function competition(page) {
+      console.log('competition()');
+      await my.goto(page, 'https://www.pointtown.com/ptu/competition/entry.do');
+      try {
+        await page.waitForSelector('.competitionArea a[href*="complete.do"]', {visible: true, timeout: 10000})
+          .then(el => el.click());
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合は既に本日実施済み？
+        console.log(e.message);
+      }
+    }
+
+    // ポイントQ
+    async function pointq(page) {
+      console.log('pointq()');
+      await my.goto(page, 'https://www.pointtown.com/ptu/quiz/input.do');
+      const labels = await page.$$('form label p');
+      if (labels.length >= 1) {
+        const i = Math.floor(Math.random() * labels.length);
+        await labels[i].click();
+      }
+      await page.click('.answer_btn a');
+    }
+
+    // スタンプラリーのポイント回収
+    async function stamprally(page) {
+      console.log('stamprally()');
+      await my.goto(page, 'https://www.pointtown.com/ptu/mypage/top');
+      try {
+        await page.waitForSelector('a.stamp-cl-btn', {visible: true, timeout: 10000})
+          .then(el => el.click())
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合は次の処理へ進む
+        console.log(e.message);
+      }
+    }
 
     // クリックコーナー（トップページ中段）
     async function click_top(page) {
@@ -164,32 +218,6 @@ if (options["workdir"]) {
       await newPage.close(); // 新ウインドウを消す
     }
 
-    // ポイントQ
-    async function pointq(page) {
-      console.log('pointq()');
-      await my.goto(page, 'https://www.pointtown.com/ptu/quiz/input.do');
-      const labels = await page.$$('form label p');
-      if (labels.length >= 1) {
-        const i = Math.floor(Math.random() * labels.length);
-        await labels[i].click();
-      }
-      await page.click('.answer_btn a');
-    }
-
-    // Amazon商品検索
-    async function amazon(page) {
-      console.log('amazon()');
-      const candidates = ['飲料', '電池', '洗剤'];
-      const searchWord = candidates[Math.floor(Math.random() * candidates.length)];
-      await my.goto(page, 'https://www.pointtown.com/ptu/amazon-search');
-      await page.waitForSelector('input[name="field-keywords-header"]', {visible: true})
-        .then(el => el.type(searchWord));
-      await Promise.all([
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.click('input[type="button"]')
-      ]);
-    }
-
     // ベジモンコレクション
     async function collection(page) {
       console.log('collection()');
@@ -205,7 +233,6 @@ if (options["workdir"]) {
         await newPage.waitFor(15000); // 15秒待ち（遷移待ち）        
         await newPage.close(); // 新ウインドウを消す
       }
-
     }
 
     // 三角くじ
@@ -263,7 +290,7 @@ if (options["workdir"]) {
       }
       await page.waitFor(15000); // 15秒待ち（遷移待ち）
     }
-    
+
     // チラシ（6時・20時更新）
     async function shufoo(page) {
       console.log('shufoo()');
@@ -313,20 +340,6 @@ if (options["workdir"]) {
         ]);
         await newPage.waitFor(15000); // 15秒待ち（遷移待ち）        
         await newPage.close(); // 新ウインドウを消す
-      }
-    }
-    
-    // スタンプラリーのポイント回収
-    async function stamprally(page) {
-      console.log('stamprally()');
-      await my.goto(page, 'https://www.pointtown.com/ptu/mypage/top');
-      try {
-        await page.waitForSelector('a.stamp-cl-btn', {visible: true, timeout: 10000})
-          .then(el => el.click())
-      } catch (e) {
-        if (!(e instanceof TimeoutError)) { throw e; }
-        // タイムアウトの場合は次の処理へ進む
-        console.log(e.message);
       }
     }
   } catch (e) {
