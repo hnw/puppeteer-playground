@@ -67,6 +67,18 @@ const argv = yargs.argv;
     async function bingo(page) {
       console.log('bingo()');
       await my.goto(page, 'http://www.gendama.jp/bingo/');
+      // 「ビンゴゲームに参加する」
+      try {
+        await Promise.all([
+          page.waitForNavigation({waitUntil: "domcontentloaded"}),
+          page.waitForSelector('#bingoContents a img[src*="start_bt.gif"]', {visible: true, timeout: 10000})
+            .then(el => el.click())
+        ]);
+      } catch (e) {
+        if (!(e instanceof TimeoutError)) { throw e; }
+        // タイムアウトの場合は次の処理へ進む
+        console.log(e.message);
+      }
       // ヒットマスのimg要素だけidがついてる
       const hitCells = await page.$$('table img[id*="NO_"]');
       for (let cell of hitCells) {
