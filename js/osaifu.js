@@ -62,7 +62,7 @@ const argv = yargs.argv;
       const nGoldText = await page.$eval('div.osaifu__data dl:nth-child(3) dd em', el => el.textContent.replace(/[,\s]/g, ''));
       const nCoin = parseInt(nCoinText, 10);
       const nGold = parseInt(nGoldText, 10);
-      return nCoin + nGold * 0.1;
+      return (nCoin * 10 + nGold) / 10;
     }
 
     // スタンプラリー
