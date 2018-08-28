@@ -64,7 +64,7 @@ if (options["workdir"]) {
       const nCoinText = await div.$eval('em', el => el.textContent.replace(/[,\s]/g, ''));
       const nPoint = parseInt(nPointText, 10);
       const nCoin = parseInt(nCoinText, 10);
-      return nPoint + nCoin * 0.1;
+      return (nPoint * 10 + nCoin) / 10;
     }
 
     // ガチャ（2時更新）

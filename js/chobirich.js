@@ -57,7 +57,7 @@ const argv = yargs.argv;
       const nPoint = parseInt(nPointText, 10);
       const nStamp = (await page.$$('div.detail_stamp_list td img')).length;
 
-      return nPoint + nStamp * 0.1;
+      return (nPoint * 10 + nStamp) / 10;
     }
 
     // 特選バナー
