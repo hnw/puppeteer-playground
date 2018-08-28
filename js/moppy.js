@@ -117,8 +117,8 @@ if (options["workdir"]) {
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
-          const closeButton = await page.waitForSelector('div.delete a', {visible: true, timeout: 20000});
-          await closeButton.click();
+          await page.waitForSelector('div.delete span.icon-cross', {Visible: true, timeout: 20000})
+            .then(el => el.click());
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は要素が見つからなかった
