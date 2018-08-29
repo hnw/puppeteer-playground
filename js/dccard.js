@@ -1,139 +1,85 @@
 const puppeteer = require('puppeteer');
+const {TimeoutError} = require('puppeteer/Errors');
 const path = require('path');
-
-let config = require(__dirname + '/../config/config.json');
-{
-  const scriptname = path.basename(__filename, '.js');
-  if (!config[scriptname]) {
-    console.log('config[' + scriptname + '] not found');
-    process.exit();
-  }
-  config = config[scriptname];
-}
-
-let launchOptions = {
-  headless: true,
-  slowMo : 200,
-  args: ['--ignore-certificate-errors'],
-};
-// For Raspbian
-if (process.arch === 'arm') {
-  launchOptions.executablePath = '/usr/bin/chromium-browser';
+const my = require(__dirname + '/common_functions.js');
+const scriptName = path.basename(__filename);
+const yargs = require('yargs')
+      .usage('Usage: $0 [options]')
+      .describe('debug', 'Force headful')
+      .help()
+      .version('0.0.1')
+      .locale('en');
+const argv = yargs.argv;
+const config = my.loadConfig(path.basename(scriptName, '.js'));
+const options = Object.assign(config['options'], { headless: !(argv.debug) });
+if (options["workdir"]) {
+  process.chdir(options["workdir"]);
 }
 
 (async () => {
-  const browser = await puppeteer.launch(launchOptions);
+  const browser = await puppeteer.launch(options);
   let page = await browser.newPage();
+  if (argv.debug) {
+    page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+  }
 
   try {
-    await page.goto('https://www2.cr.mufg.jp/newsplus/?cardBrand=0012&lid=news_dc');
+    await login(page);
+    await changePaymentMethod(page);
 
     // ログインページ
-    {
-      const loginUseridSelector = 'input[name="webId"]';
-      const loginPasswordSelector = 'input[name="webPassword"]';
-      const loginButtonSelector = 'input[name="submit1"]';
-
-      await page.waitForSelector(loginUseridSelector, {visible: true});
-      await page.waitForSelector(loginPasswordSelector, {visible: true});
-      await page.waitForSelector(loginButtonSelector, {visible: true});
-
-      await page.type(loginUseridSelector, config['userid']);
-      await page.type(loginPasswordSelector, config['password']);
-
-      await page.click(loginButtonSelector)
-    }
-
-    // 「追加確認項目」サブウインドウ
-    {
-      const loginBirthDaySelector = 'input[name="webBirthDay"]';
-      const loginPhoneNumSelector = 'input[name="webPhoneNum"]';
-      const subWindowLoginButtonSelector = 'input[name="submit"]';
-      let subWindowInputSelector, subWindowInputText;
-
+    async function login(page) {
+      await my.goto(page, 'https://club.dccard.co.jp/service/members/htmls/prp/cookie/index.htm');
+      await page.waitForSelector('input[name="user_id_input"]', {visible: true})
+        .then(el => el.type(config['userid']));
+      await page.type('input[name="user_password_input"]', config['password']);
+      await page.click('input[type="image"]');
+      // 追加確認項目の入力
       if (config['birthday']) {
-        subWindowInputSelector = loginBirthDaySelector;
-        subWindowInputText = config['birthday'];
+        await page.waitForSelector('input[name="BIRTYMD"]', {visible: true})
+          .then(el => el.type(config['birthday']));
       } else if (config['phonenum']) {
-        subWindowInputSelector = loginPhoneNumSelector;
-        subWindowInputText = config['phonenum'];
+        await page.waitForSelector('input[name="TELGAI"]', {visible: true})
+          .then(el => el.type(config['phonenum']));
       } else {
         throw new Error("Neithor birthday nor phonenum is specified.")
       }
-
-      // サブウインドウ出現待ち
-      await page.waitForSelector(subWindowInputSelector, {visible: true});
-
-      await page.type(subWindowInputSelector, subWindowInputText);
-      await Promise.all([
-        // ページ遷移待ち
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        page.click(subWindowLoginButtonSelector)
-      ]);
+      await page.click('input[type="image"]');
     }
 
-    // newsplusトップ
-    {
-      const anchors = await page.$x('//a[@href != "" and contains(., "利用明細照会")]');
-
-      [page] = await Promise.all([
-        // 新ウインドウ遷移（target=_blank）待ち
-        new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-        anchors[0].click()
-      ]);
-      // frame出現待ち
-      await page.waitForSelector('frame', {visible: true});
+    // リボお支払方法変更ページ（カード選択）
+    async function changePaymentMethod(page) {
+      // カード選択
+      await my.goto(page, 'https://club.dccard.co.jp/service/members/asps/MemberTop.asp?F=35');
+      const frame = await my.waitForFrame(page, f => f.name() === 'MainFrame');
+      await frame.waitForSelector('input[name="Sel_Card"][value="1"]', {visible: true})
+        .then(el => el.click());
+      await page.click('input[type="image"][alt="カード選択"]');
+      // 変更内容入力
+      await frame.waitForSelector('select[name="Sel_Pay"]', {visible: true})
+        .then(el => el.click());
+      await page.click('input[name="Sel_TmpIktu"][value="2"]');
+      await page.click('input[type="image"][alt="確認"]');
+      // 内容確認
+      await frame.waitForSelector('input[type="image"][alt="確定"]', {visible: true})
+        .then(el => el.click());
+      await frame.click(submitImageSelector);
+      //
+      await page.waitFor(10000); // 10秒待ち
+      let bodyHTML = await page.evaluate(() => document.body.innerHTML);
+      console.log(bodyHTML);
+      await my.uploadScreenShot(page, 'confirm.png');
     }
-
-    // DC Web サービスメニュートップ
-    {
-      const frame = await page.frames().find(f => f.name() === 'MenuFrame');
-      const anchors = await frame.$x('//a/img[@alt = "リボお支払方法変更"]/parent::*');
-      await Promise.all([
-        // ページ遷移待ち
-        page.waitForNavigation({waitUntil: "domcontentloaded"}),
-        anchors[0].click()
-      ]);
-    }
-
-    {
-      // リボお支払方法変更ページ（カード選択）
-      const frame = await page.frames().find(f => f.name() === 'MainFrame');
-
-      {
-        const radioButtonSelector = 'input[name="Sel_Card"]';
-        const submitImageSelector = 'input[type="image"][alt="カード選択"]';
-
-        await frame.waitForSelector(radioButtonSelector, {visible: true});
-        await frame.click(radioButtonSelector);
-        await frame.click(submitImageSelector);
-      }
-
-      {
-        // リボお支払方法変更ページ（変更内容入力）
-        const selectBoxSelector = 'select[name="Sel_Pay"]';
-        const radioButtonSelector = 'input[name="Sel_TmpIktu"][value="2"]';
-        const submitImageSelector = 'input[type="image"][alt="確認"]';
-
-        await frame.waitForSelector(selectBoxSelector, {visible: true});
-        await frame.click(radioButtonSelector);
-        await frame.click(submitImageSelector);
-      }
-
-      {
-        // リボお支払方法変更ページ（内容確認）
-        const submitImageSelector = 'input[type="image"][alt="確定"]';
-
-        await frame.waitForSelector(submitImageSelector, {visible: true});
-        await page.screenshot({path: 'confirm.png'});
-        await frame.click(submitImageSelector);
-      }
-    }
-    // 完了
-  } catch (err) {
-    console.log(err);
+  } catch (e) {
+    console.log(e);
+    my.postError(e);
+    await my.postUrls(browser);
+    await my.uploadScreenShot(page, 'error.png');
   } finally {
-    await page.screenshot({path: 'error.png'});
-    await browser.close();
+    if (argv.debug) {
+      console.log('The script is finished.');
+    } else {
+      await browser.close();
+    }
   }
 })();
