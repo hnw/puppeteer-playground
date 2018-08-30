@@ -44,31 +44,39 @@ if (options["workdir"]) {
       } else {
         throw new Error("Neithor birthday nor phonenum is specified.")
       }
-      await page.click('input[type="image"]');
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        page.click('input[type="image"]')
+      ]);
     }
 
     // リボお支払方法変更ページ（カード選択）
     async function changePaymentMethod(page) {
+      // トップページ
+      const menuFrame = await my.waitForFrame(page, f => f.name() === 'MenuFrame');
+      await Promise.all([
+        page.waitForNavigation({waitUntil: "domcontentloaded"}),
+        menuFrame.waitForSelector('a[href*="MemberTop.asp?F=35"]', {visible: true})
+          .then(el => el.click())
+      ]);
       // カード選択
-      await my.goto(page, 'https://club.dccard.co.jp/service/members/asps/MemberTop.asp?F=35');
       const frame = await my.waitForFrame(page, f => f.name() === 'MainFrame');
-      await frame.waitForSelector('input[name="Sel_Card"][value="1"]', {visible: true})
-        .then(el => el.click());
-      await page.click('input[type="image"][alt="カード選択"]');
+      await frame.waitForSelector('img[src*="cardsel_t.gif"]', {visible: true});
+      await frame.click('input[name="Sel_Card"][value="1"]');
+      await frame.click('input[type="image"]');
       // 変更内容入力
-      await frame.waitForSelector('select[name="Sel_Pay"]', {visible: true})
-        .then(el => el.click());
-      await page.click('input[name="Sel_TmpIktu"][value="2"]');
-      await page.click('input[type="image"][alt="確認"]');
+      await frame.waitForSelector('img[src*="chgselinput2_t.gif"]', {visible: true});
+      await frame.click('select[name="Sel_Pay"]');
+      await frame.click('input[name="Sel_TmpIktu"][value="2"]');
+      await frame.click('input[type="image"]');
       // 内容確認
-      await frame.waitForSelector('input[type="image"][alt="確定"]', {visible: true})
-        .then(el => el.click());
-      await frame.click(submitImageSelector);
-      //
-      await page.waitFor(10000); // 10秒待ち
+      await frame.waitForSelector('img[src*="kakunin_t2.gif"]', {visible: true});
+      await frame.click('input[type="image"]');
+      // 完了
+      await frame.waitForSelector('img[src*="kanryou_t2.gif"]', {visible: true});
       let bodyHTML = await page.evaluate(() => document.body.innerHTML);
       console.log(bodyHTML);
-      await my.uploadScreenShot(page, 'confirm.png');
+      await my.uploadScreenShot(page, 'complete.png');
     }
   } catch (e) {
     console.log(e);
