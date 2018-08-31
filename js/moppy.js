@@ -250,7 +250,7 @@ if (options["workdir"]) {
           // オーバーレイ広告がもし出ていればclose
           try {
             const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
-            let bodyHTML = await page.evaluate(() => document.body.innerHTML);
+            let bodyHTML = await newPage.evaluate(() => document.body.innerHTML);
             console.log(bodyHTML);
             await closeButton.hover();
             await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
