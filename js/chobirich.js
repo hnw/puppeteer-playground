@@ -53,7 +53,7 @@ const argv = yargs.argv;
     async function getCurrentPoint(page) {
       console.log('getCurrentPoint()');
       await page.goto('http://www.chobirich.com/mypage/point_details/stamp/', {waitUntil: "domcontentloaded"});
-      const nPointText = await page.$eval('div.mypage_navi span.user_pt_n', el => el.textContent);
+      const nPointText = await page.$eval('div.mypage_navi span.user_pt_n', el => el.textContent.replace(/[,\s]/g, ''));
       const nPoint = parseInt(nPointText, 10);
       const nStamp = (await page.$$('div.detail_stamp_list td img')).length;
 
