@@ -117,14 +117,18 @@ if (options["workdir"]) {
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
-          await page.waitForSelector('div.delete span.icon-cross', {Visible: true, timeout: 20000})
-            .then(el => el.click());
+          const closeButton = await newPage.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
+          await closeButton.hover();
+          await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
+          /* デバッグ用 */
+          let bodyHTML = await page.evaluate(() => document.body.innerHTML);
+          console.log(bodyHTML);
+          /* デバッグ用ここまで */
+          await closeButton.click()
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は要素が見つからなかった
           console.log(e.message);
-          let bodyHTML = await page.evaluate(() => document.body.innerHTML);
-          console.log(bodyHTML);
         }
         console.log(88);
         await page.waitForSelector('p.bingo__btnWrapper', {visible: true})
@@ -250,8 +254,6 @@ if (options["workdir"]) {
           // オーバーレイ広告がもし出ていればclose
           try {
             const closeButton = await newPage.waitForSelector('a.button-close', {visible: true, timeout: 10000});
-            let bodyHTML = await newPage.evaluate(() => document.body.innerHTML);
-            console.log(bodyHTML);
             await closeButton.hover();
             await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
             await closeButton.click()
