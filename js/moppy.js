@@ -117,9 +117,9 @@ if (options["workdir"]) {
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
-          const closeButton = await newPage.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
+          const closeButton = await page.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
           await closeButton.hover();
-          await newPage.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
+          await page.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
           /* デバッグ用 */
           let bodyHTML = await page.evaluate(() => document.body.innerHTML);
           console.log(bodyHTML);
