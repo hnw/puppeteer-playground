@@ -118,12 +118,13 @@ if (options["workdir"]) {
         // オーバーレイ広告がもし出ていればclose
         try {
           const closeButton = await page.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
-          await closeButton.hover();
-          await page.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
+          console.log(closeButton);
           /* デバッグ用 */
           let bodyHTML = await page.evaluate(() => document.body.innerHTML);
           console.log(bodyHTML);
           /* デバッグ用ここまで */
+          await closeButton.hover();
+          await page.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
           await closeButton.click()
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
