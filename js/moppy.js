@@ -115,6 +115,7 @@ if (options["workdir"]) {
         // 「結果を見る」
         await page.waitForSelector('img[src*="btn_play_finish.png"]', {visible: true})
           .then(img => img.click());
+        await page.waitFor(15000); // 15秒待ち
         // オーバーレイ広告がもし出ていればclose
         try {
           const closeButton = await page.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
