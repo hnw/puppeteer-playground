@@ -115,18 +115,13 @@ if (options["workdir"]) {
         // 「結果を見る」
         await page.waitForSelector('img[src*="btn_play_finish.png"]', {visible: true})
           .then(img => img.click());
-        await page.waitFor(15000); // 15秒待ち
         // オーバーレイ広告がもし出ていればclose
         try {
-          const closeButton = await page.waitForSelector('div.delete span.icon-cross', {visible: true, timeout: 20000});
-          console.log(closeButton);
-          /* デバッグ用 */
-          let bodyHTML = await page.evaluate(() => document.body.innerHTML);
-          console.log(bodyHTML);
-          /* デバッグ用ここまで */
-          await closeButton.hover();
-          await page.waitFor(3000); // 3秒待ち（おじゃま広告を避ける時間）
-          await closeButton.click()
+          await page.waitFor(15000); // 15秒待ち
+          await page.evaluate(() => {
+            // page.waitForSelector()を使うと「Node is not of type HTMLElement」エラーが出るのでDOM操作
+            document.querySelector('div.delete span.icon-cross').click();
+          });
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
           // タイムアウトの場合は要素が見つからなかった
