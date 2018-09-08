@@ -117,10 +117,12 @@ if (options["workdir"]) {
           .then(img => img.click());
         // オーバーレイ広告がもし出ていればclose
         try {
+          const closeButtonSelector = 'div.delete span.icon-cross';
           await page.waitFor(15000); // 15秒待ち
+          await page.waitForSelector(closeButtonSelector, {visible: true, timeout: 20000});        
           await page.evaluate(() => {
             // page.waitForSelector()を使うと「Node is not of type HTMLElement」エラーが出るのでDOM操作
-            document.querySelector('div.delete span.icon-cross').click();
+            document.querySelector(closeButtonSelector).click();
           });
         } catch (e) {
           if (!(e instanceof TimeoutError)) { throw e; }
