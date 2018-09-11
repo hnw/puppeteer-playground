@@ -129,8 +129,8 @@ if (options["workdir"]) {
           console.log(e.message);
         }
         console.log(88);
-        await page.waitForSelector('p.bingo__btnWrapper', {visible: true})
-          .then(el => el.click());
+        // page.waitForSelector()を使うと「Node is not of type HTMLElement」エラーが出るのでDOM操作
+        document.querySelector('p.bingo__btnWrapper').click();
         console.log(89);
       } catch (e) {
         if (!(e instanceof TimeoutError)) { throw e; }
