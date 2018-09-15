@@ -178,14 +178,20 @@ if (options["workdir"]) {
           new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
           a.click()
         ]);
-        [newPage2] = await Promise.all([
-          // 新ウインドウ遷移（target=_blank）待ち
-          new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
-          newPage1.waitForSelector('.pt-btn-action a', {visible: true})
-            .then(el => el.click())
-        ]);
-        await newPage2.waitFor(15000); // 15秒待ち（遷移待ち）        
-        await newPage2.close(); // 新ウインドウを消す
+        try {
+          [newPage2] = await Promise.all([
+            // 新ウインドウ遷移（target=_blank）待ち
+            new Promise(resolve => browser.once('targetcreated', target => resolve(target.page()))),
+            newPage1.waitForSelector('.pt-btn-action a', {visible: true, timeout: 10000})
+              .then(el => el.click())
+          ]);
+          await newPage2.waitFor(15000); // 15秒待ち（遷移待ち）        
+          await newPage2.close(); // 新ウインドウを消す
+        } catch (e) {
+          if (!(e instanceof TimeoutError)) { throw e; }
+          // タイムアウトの場合は次の処理へ進む
+          console.log(e.message);
+        }
         await newPage1.close(); // 新ウインドウを消す
       }
     }
